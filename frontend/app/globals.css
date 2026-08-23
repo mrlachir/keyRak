@@ -1,0 +1,117 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #f8f2e8;
+  --foreground: #201b18;
+  --font-sans: "Manrope Variable";
+  --font-serif: "Cormorant Garamond Variable";
+}
+
+* {
+  border-color: theme("colors.sand.200");
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: theme("colors.terracotta.200");
+  color: theme("colors.terracotta.950");
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@layer components {
+  .surface-card {
+    @apply border border-white/70 bg-sand-50/90 shadow-card backdrop-blur-sm;
+  }
+
+  .eyebrow {
+    @apply text-xs font-bold uppercase tracking-[0.22em] text-terracotta-600;
+  }
+
+  .keyrak-calendar .rdp-root {
+    --rdp-accent-color: theme("colors.majorelle.600");
+    --rdp-accent-background-color: theme("colors.majorelle.100");
+    --rdp-day-height: 2.45rem;
+    --rdp-day-width: 2.45rem;
+    --rdp-day_button-border-radius: 9999px;
+    --rdp-selected-border: 0;
+    width: 100%;
+    color: theme("colors.sand.800");
+  }
+
+  .keyrak-calendar .rdp-month,
+  .keyrak-calendar .rdp-month_grid {
+    width: 100%;
+  }
+
+  .keyrak-calendar .rdp-month_caption {
+    font-family: var(--font-serif), Georgia, serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: theme("colors.ink");
+  }
+
+  .keyrak-calendar .rdp-weekday {
+    color: theme("colors.sand.600");
+    font-size: 0.7rem;
+    font-weight: 800;
+  }
+
+  .keyrak-calendar .rdp-footer {
+    padding-top: 0.75rem;
+  }
+
+  .keyrak-calendar .bg-red-100 .rdp-day_button {
+    color: inherit;
+    text-decoration: inherit;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .zellige-overlay {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .zellige-overlay::before {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    content: "";
+    background-image: theme("backgroundImage.zellige");
+    background-size: theme("backgroundSize.zellige");
+    opacity: 0.72;
+    mask-image: linear-gradient(to bottom, black, transparent 88%);
+  }
+
+  .hide-scrollbar {
+    scrollbar-width: none;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}

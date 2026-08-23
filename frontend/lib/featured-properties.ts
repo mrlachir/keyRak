@@ -1,0 +1,43 @@
+import type { PropertyCardData } from "@/types";
+
+export const featuredProperties: PropertyCardData[] = [
+  {
+    id: "11111111-1111-4111-8111-111111111111",
+    title: "Riad Noor",
+    location: "Mouassine, Medina",
+    pricePerNight: 2150,
+    rating: 4.94,
+    imageUrl: "/properties/riad-courtyard.jpg",
+    imageAlt: "Traditional Marrakesh riad courtyard with a pool",
+    guests: 6,
+    bedrooms: 3,
+    tags: ["Plunge pool", "Rooftop", "Breakfast"],
+    propertyType: "HOUSE",
+  },
+  {
+    id: "22222222-2222-4222-8222-222222222222",
+    title: "Villa Atlas",
+    location: "Route de l’Ourika",
+    pricePerNight: 3900,
+    rating: 4.89,
+    imageUrl: "/properties/villa-pool.jpg",
+    imageAlt: "Contemporary villa and swimming pool in an arid landscape",
+    guests: 8,
+    bedrooms: 4,
+    tags: ["Private pool", "Garden", "Mountain view"],
+    propertyType: "VILLA",
+  },
+  {
+    id: "33333333-3333-4333-8333-333333333333",
+    title: "Dar Majorelle",
+    location: "Guéliz, Marrakesh",
+    pricePerNight: 1450,
+    rating: 4.86,
+    imageUrl: "/properties/marrakesh-terrace.jpg",
+    imageAlt: "Sunset over Marrakesh rooftops from a terrace",
+    guests: 4,
+    bedrooms: 2,
+    tags: ["Terrace", "Workspace", "Old city view"],
+    propertyType: "APARTMENT",
+  },
+];

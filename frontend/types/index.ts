@@ -1,0 +1,184 @@
+export type UUID = string;
+export type UserRole = "CLIENT" | "ADMIN";
+export type PropertyType = "VILLA" | "APARTMENT" | "HOUSE";
+export type PropertyMediaType = "IMAGE" | "VIDEO" | "IMAGE_360";
+export type BookingStatus = "PENDING" | "CONFIRMED" | "CANCELLED";
+
+export interface User {
+  id: UUID;
+  googleSubject?: string | null;
+  email: string;
+  displayName?: string | null;
+  avatarUrl?: string | null;
+  role: UserRole;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserProfileResponse {
+  id: UUID;
+  email: string;
+  displayName?: string | null;
+  avatarUrl?: string | null;
+  role: UserRole;
+}
+
+export interface Tag {
+  id: number;
+  name: string;
+  icon?: string | null;
+}
+
+export interface PropertyMedia {
+  id: UUID;
+  url: string;
+  type: PropertyMediaType;
+  displayOrder: number;
+  createdAt: string;
+}
+
+export interface Property {
+  id: UUID;
+  title: string;
+  description?: string | null;
+  propertyType: PropertyType;
+  address: string;
+  city: string;
+  pricePerNight: number;
+  latitude: number;
+  longitude: number;
+  maxGuests: number;
+  bedrooms: number;
+  bathrooms: number;
+  active: boolean;
+  media: PropertyMedia[];
+  tags: Tag[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Booking {
+  id: UUID;
+  userId: UUID;
+  propertyId: UUID;
+  checkInDate: string;
+  checkOutDate: string;
+  adults: number;
+  children: number;
+  specialRequests?: string | null;
+  totalPrice: number;
+  status: BookingStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminDashboardMetrics {
+  totalActiveProperties: number;
+  pendingBookingRequests: number;
+  estimatedRevenue: number;
+}
+
+export interface AdminBooking {
+  id: UUID;
+  propertyId: UUID;
+  propertyTitle: string;
+  userId: UUID;
+  guestName?: string | null;
+  guestEmail: string;
+  checkInDate: string;
+  checkOutDate: string;
+  adults: number;
+  children: number;
+  specialRequests?: string | null;
+  totalPrice: number;
+  status: BookingStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Trip {
+  id: UUID;
+  propertyId: UUID;
+  propertyTitle: string;
+  propertyCity: string;
+  propertyImageUrl?: string | null;
+  checkInDate: string;
+  checkOutDate: string;
+  adults: number;
+  children: number;
+  totalPrice: number;
+  status: BookingStatus;
+  createdAt: string;
+}
+
+export interface PropertyCardData {
+  id: UUID;
+  title: string;
+  location: string;
+  pricePerNight: number;
+  rating: number;
+  imageUrl: string;
+  imageAlt: string;
+  guests: number;
+  bedrooms: number;
+  tags: string[];
+  propertyType: PropertyType;
+}
+
+export interface AiSearchFilters {
+  location: string;
+  guests: number | null;
+  amenities: string[];
+}
+
+export interface AiDescriptionRequest {
+  title: string;
+  propertyType: PropertyType;
+  city: string;
+  maxGuests: number;
+  bedrooms: number;
+  bathrooms: number;
+  amenities: string[];
+}
+
+export interface AiDescriptionResponse {
+  description: string;
+}
+
+export interface BlockedDatesResponse {
+  blockedDates: string[];
+}
+
+export interface CreateBookingRequest {
+  propertyId: UUID;
+  checkInDate: string;
+  checkOutDate: string;
+  adults: number;
+  children: number;
+  specialRequests?: string;
+}
+
+export interface CreatePropertyRequest {
+  title: string;
+  description: string;
+  propertyType: PropertyType;
+  address: string;
+  city: string;
+  pricePerNight: number;
+  latitude: number;
+  longitude: number;
+  maxGuests: number;
+  bedrooms: number;
+  bathrooms: number;
+  active: boolean;
+  tagNames: string[];
+  media: Array<{
+    url: string;
+    type: PropertyMediaType;
+    displayOrder: number;
+  }>;
+}
+
+export type ActionResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; message: string; fieldErrors?: Record<string, string> };
