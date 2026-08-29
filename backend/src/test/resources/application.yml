@@ -21,7 +21,7 @@ app:
     google:
       client-id: test-google-client-id
   ai:
-    gemini:
-      api-key: test-gemini-key
-      model: gemini-test-model
-      base-url: https://example.test/v1beta
+    groq:
+      api-key: test-groq-key
+      model: openai/gpt-oss-20b
+      endpoint: https://example.test/openai/v1/chat/completions

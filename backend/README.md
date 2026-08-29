@@ -9,10 +9,10 @@ Spring Boot 3 / Java 17 backend scaffold for the decoupled KEYRAK real-estate Sa
 - The `property_tags` junction table owns the property/tag many-to-many association.
 - Stateless Spring Security resource server with HS256 JWT signature, issuer, expiry, and audience validation.
 - Automatic synchronization of trusted Google SSO claims into the local `users` table.
-- Gemini semantic-search endpoint with schema-constrained JSON output for location, guests, and amenities.
+- Groq semantic-search endpoint using native JSON mode for structured property filters.
 - Public property search/detail and blocked-date endpoints.
 - Conflict-safe booking creation that serializes requests per property and calculates total price on the server.
-- Administrator-only property creation and Gemini property-description generation.
+- Administrator-only property creation and Groq property-description generation.
 - Administrator-only KPI aggregation and locked pending-booking moderation.
 - Subject-scoped client booking history that never accepts a user ID from the browser.
 

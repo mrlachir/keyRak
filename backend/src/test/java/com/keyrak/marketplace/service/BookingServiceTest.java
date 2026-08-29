@@ -68,6 +68,8 @@ class BookingServiceTest {
                 .id(UUID.randomUUID())
                 .googleSubject("google-subject")
                 .email("guest@example.com")
+                .displayName("Marketplace Guest")
+                .telephone("+212 600 000 000")
                 .build();
     }
 
@@ -87,6 +89,7 @@ class BookingServiceTest {
                 any(UUID.class), anyCollection(), any(LocalDate.class), any(LocalDate.class)
         )).thenReturn(0L);
         when(userService.getByGoogleSubject("google-subject")).thenReturn(user);
+        when(userService.isProfileComplete(user)).thenReturn(true);
         when(bookingRepository.saveAndFlush(any(Booking.class))).thenAnswer(invocation -> {
             Booking booking = invocation.getArgument(0);
             booking.setId(UUID.randomUUID());
@@ -108,6 +111,8 @@ class BookingServiceTest {
                 property.getId(), checkIn, checkIn.plusDays(2), 2, 0, null
         );
         when(propertyRepository.findByIdForUpdate(property.getId())).thenReturn(Optional.of(property));
+        when(userService.getByGoogleSubject("google-subject")).thenReturn(user);
+        when(userService.isProfileComplete(user)).thenReturn(true);
         when(bookingRepository.countByPropertyIdAndStatusInAndCheckOutDateGreaterThanAndCheckInDateLessThan(
                 any(UUID.class), anyCollection(), any(LocalDate.class), any(LocalDate.class)
         )).thenReturn(1L);
@@ -143,5 +148,26 @@ class BookingServiceTest {
                 checkIn.plusDays(1),
                 checkIn.plusDays(2)
         );
+    }
+
+    @Test
+    void pendingBookingCanOnlyBeCancelledByItsOwner() {
+        Booking booking = Booking.builder()
+                .id(UUID.randomUUID())
+                .property(property)
+                .user(user)
+                .checkInDate(LocalDate.now().plusDays(20))
+                .checkOutDate(LocalDate.now().plusDays(22))
+                .adults(2)
+                .children(0)
+                .totalPrice(new BigDecimal("2500.00"))
+                .status(BookingStatus.PENDING)
+                .build();
+        when(bookingRepository.findByIdForUpdate(booking.getId())).thenReturn(Optional.of(booking));
+        when(bookingRepository.saveAndFlush(booking)).thenReturn(booking);
+
+        BookingResponse response = bookingService.cancelPendingBooking(booking.getId(), "google-subject");
+
+        assertThat(response.status()).isEqualTo(BookingStatus.CANCELLED);
     }
 }

@@ -3,12 +3,14 @@ export type UserRole = "CLIENT" | "ADMIN";
 export type PropertyType = "VILLA" | "APARTMENT" | "HOUSE";
 export type PropertyMediaType = "IMAGE" | "VIDEO" | "IMAGE_360";
 export type BookingStatus = "PENDING" | "CONFIRMED" | "CANCELLED";
+export type SearchMode = "standard" | "ai";
 
 export interface User {
   id: UUID;
   googleSubject?: string | null;
   email: string;
   displayName?: string | null;
+  telephone?: string | null;
   avatarUrl?: string | null;
   role: UserRole;
   createdAt: string;
@@ -19,6 +21,7 @@ export interface UserProfileResponse {
   id: UUID;
   email: string;
   displayName?: string | null;
+  telephone?: string | null;
   avatarUrl?: string | null;
   role: UserRole;
 }
@@ -126,9 +129,34 @@ export interface PropertyCardData {
 }
 
 export interface AiSearchFilters {
-  location: string;
+  keyword: string | null;
+  location: string | null;
+  tags: string[] | null;
+  minPrice: number | null;
+  maxPrice: number | null;
   guests: number | null;
-  amenities: string[];
+  bedrooms: number | null;
+  bathrooms: number | null;
+  checkInDate: string | null;
+  checkOutDate: string | null;
+}
+
+export interface PropertySearchFilters {
+  keyword?: string;
+  location?: string;
+  guests?: number | null;
+  minPrice?: number;
+  maxPrice?: number;
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  tags?: string[];
+  checkInDate?: string;
+  checkOutDate?: string;
+}
+
+export interface UpdateUserProfileRequest {
+  fullName: string;
+  telephone: string;
 }
 
 export interface AiDescriptionRequest {

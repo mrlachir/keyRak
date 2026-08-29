@@ -72,6 +72,13 @@ public class BookingService {
         Property property = propertyRepository.findByIdForUpdate(request.propertyId())
                 .filter(Property::isActive)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Property not found"));
+        User user = userService.getByGoogleSubject(googleSubject);
+        if (!userService.isProfileComplete(user)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Complete your full name and telephone before requesting a booking"
+            );
+        }
 
         if (!request.checkOutDate().isAfter(request.checkInDate())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Check-out must be after check-in");
@@ -97,7 +104,6 @@ public class BookingService {
 
         long nights = ChronoUnit.DAYS.between(request.checkInDate(), request.checkOutDate());
         BigDecimal totalPrice = property.getPricePerNight().multiply(BigDecimal.valueOf(nights));
-        User user = userService.getByGoogleSubject(googleSubject);
         Booking booking = Booking.builder()
                 .property(property)
                 .user(user)
@@ -155,6 +161,24 @@ public class BookingService {
 
         booking.setStatus(requestedStatus);
         return AdminBookingResponse.from(bookingRepository.saveAndFlush(booking));
+    }
+
+    @Transactional
+    public BookingResponse cancelPendingBooking(UUID bookingId, String googleSubject) {
+        Booking booking = bookingRepository.findByIdForUpdate(bookingId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
+        if (!googleSubject.equals(booking.getUser().getGoogleSubject())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found");
+        }
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Only pending reservations can be cancelled online"
+            );
+        }
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        return BookingResponse.from(bookingRepository.saveAndFlush(booking));
     }
 
     private String normalizeSpecialRequests(String value) {

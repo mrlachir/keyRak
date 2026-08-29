@@ -1,6 +1,6 @@
 # KEYRAK Marketplace
 
-KEYRAK is a Java 17 Spring Boot and Next.js real-estate marketplace with Google SSO, HS256 API tokens, Gemini
+KEYRAK is a Java 17 Spring Boot and Next.js real-estate marketplace with Google SSO, HS256 API tokens, Groq-powered
 semantic search, interactive booking availability, immersive property media, and administrator/client portals.
 
 ## Production-style container stack
@@ -17,7 +17,7 @@ The frontend is published on port `3000` and the backend on port `8080` by defau
 the private Compose network and persists data in the `mysql_data` named volume.
 
 Compose creates secrets from the host environment and grants each service only the values it needs. The shared
-`JWT_SECRET` is mounted into both application containers; database and Gemini credentials are never written into
+`JWT_SECRET` is mounted into both application containers; database and Groq credentials are never written into
 an image. The database healthcheck gates backend startup, and the backend healthcheck gates frontend startup.
 
 Useful operations:

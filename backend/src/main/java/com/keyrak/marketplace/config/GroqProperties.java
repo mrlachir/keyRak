@@ -4,10 +4,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.net.URI;
 
-@ConfigurationProperties(prefix = "app.ai.gemini")
-public record AiProperties(
+@ConfigurationProperties(prefix = "app.ai.groq")
+public record GroqProperties(
         String apiKey,
         String model,
-        URI baseUrl
+        URI endpoint
 ) {
 }

@@ -4,6 +4,7 @@ import com.keyrak.marketplace.domain.entity.User;
 import com.keyrak.marketplace.domain.enumeration.UserRole;
 import com.keyrak.marketplace.repository.UserRepository;
 import com.keyrak.marketplace.security.InvalidGoogleIdentityException;
+import com.keyrak.marketplace.web.dto.UpdateUserProfileRequest;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,7 +47,9 @@ public class UserService {
 
         user.setGoogleSubject(googleSubject);
         user.setEmail(email);
-        user.setDisplayName(trimToLength(jwt.getClaimAsString("name"), 150));
+        if (user.getDisplayName() == null || user.getDisplayName().isBlank()) {
+            user.setDisplayName(trimToLength(jwt.getClaimAsString("name"), 150));
+        }
         user.setAvatarUrl(trimToLength(jwt.getClaimAsString("picture"), 2048));
         return userRepository.save(user);
     }
@@ -55,6 +58,21 @@ public class UserService {
     public User getByGoogleSubject(String googleSubject) {
         return userRepository.findByGoogleSubject(googleSubject)
                 .orElseThrow(() -> new InvalidGoogleIdentityException("Authenticated user was not synchronized"));
+    }
+
+    @Transactional
+    public User updateProfile(String googleSubject, UpdateUserProfileRequest request) {
+        User user = getByGoogleSubject(googleSubject);
+        user.setDisplayName(request.fullName().trim());
+        user.setTelephone(request.telephone().trim());
+        return userRepository.save(user);
+    }
+
+    public boolean isProfileComplete(User user) {
+        return user.getDisplayName() != null
+                && !user.getDisplayName().isBlank()
+                && user.getTelephone() != null
+                && !user.getTelephone().isBlank();
     }
 
     private String normalizeEmail(String email) {

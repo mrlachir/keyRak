@@ -10,8 +10,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.http.MediaType;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -36,6 +38,33 @@ class GoogleUserSynchronizationIntegrationTest {
                 .andExpect(jsonPath("$.email").value("guest@example.com"))
                 .andExpect(jsonPath("$.displayName").value("Marketplace Guest"))
                 .andExpect(jsonPath("$.role").value("CLIENT"));
+
+        mockMvc.perform(put("/api/users/me")
+                        .with(jwt().jwt(token -> token
+                                .subject("google-account-123")
+                                .claim("email", "Guest@Example.com")
+                                .claim("email_verified", true)
+                                .claim("name", "Marketplace Guest")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "fullName": "Preferred Guest Name",
+                                  "telephone": "+212 600 000 000"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.displayName").value("Preferred Guest Name"))
+                .andExpect(jsonPath("$.telephone").value("+212 600 000 000"));
+
+        mockMvc.perform(get("/api/users/me")
+                        .with(jwt().jwt(token -> token
+                                .subject("google-account-123")
+                                .claim("email", "Guest@Example.com")
+                                .claim("email_verified", true)
+                                .claim("name", "A Different Google Name"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.displayName").value("Preferred Guest Name"))
+                .andExpect(jsonPath("$.telephone").value("+212 600 000 000"));
 
         assertThat(userRepository.findByGoogleSubject("google-account-123"))
                 .isPresent()

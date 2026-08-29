@@ -8,8 +8,9 @@ import type {
   AiSearchFilters,
   BlockedDatesResponse,
   Property,
-  PropertyCardData,
   PropertyMedia,
+  PropertySearchFilters,
+  Tag,
 } from "@/types";
 
 const fallbackTimestamp = "2026-01-01T00:00:00.000Z";
@@ -18,15 +19,14 @@ function demoProperty(id: string): Property | null {
   const property = featuredProperties.find((item) => item.id === id);
   if (!property) return null;
 
-  const media: PropertyMedia[] = [
-    {
-      id: `${property.id}-image`,
-      url: property.imageUrl,
-      type: "IMAGE",
-      displayOrder: 0,
+  const media: PropertyMedia[] = [property, ...featuredProperties.filter((item) => item.id !== property.id)]
+    .map((item, index) => ({
+      id: `${property.id}-image-${index}`,
+      url: item.imageUrl,
+      type: "IMAGE" as const,
+      displayOrder: index,
       createdAt: fallbackTimestamp,
-    },
-  ];
+    }));
 
   return {
     id: property.id,
@@ -75,15 +75,32 @@ export async function analyzeSearch(query: string): Promise<AiSearchFilters> {
   });
 }
 
-export async function searchProperties(filters: Partial<AiSearchFilters>): Promise<Property[]> {
+export async function searchProperties(filters: PropertySearchFilters): Promise<Property[]> {
   const parameters = new URLSearchParams();
+  if (filters.keyword) parameters.set("keyword", filters.keyword);
   if (filters.location) parameters.set("location", filters.location);
   if (filters.guests) parameters.set("guests", String(filters.guests));
-  for (const amenity of filters.amenities ?? []) {
-    parameters.append("amenities", amenity);
+  if (filters.minPrice !== undefined) parameters.set("minPrice", String(filters.minPrice));
+  if (filters.maxPrice !== undefined) parameters.set("maxPrice", String(filters.maxPrice));
+  if (filters.bedrooms !== undefined && filters.bedrooms !== null) {
+    parameters.set("bedrooms", String(filters.bedrooms));
+  }
+  if (filters.bathrooms !== undefined && filters.bathrooms !== null) {
+    parameters.set("bathrooms", String(filters.bathrooms));
+  }
+  if (filters.checkInDate) parameters.set("checkInDate", filters.checkInDate);
+  if (filters.checkOutDate) parameters.set("checkOutDate", filters.checkOutDate);
+  for (const tag of filters.tags ?? []) {
+    parameters.append("tags", tag);
   }
   const queryString = parameters.toString();
   return apiFetch<Property[]>(`/api/properties/search${queryString ? `?${queryString}` : ""}`, {
+    authenticated: false,
+  });
+}
+
+export async function getPropertyTags(): Promise<Tag[]> {
+  return apiFetch<Tag[]>("/api/properties/tags", {
     authenticated: false,
   });
 }
@@ -101,21 +118,4 @@ export async function getBlockedDates(propertyId: string): Promise<{
   } catch {
     return { blockedDates: [], availabilityReady: false };
   }
-}
-
-export function toPropertyCardData(property: Property): PropertyCardData {
-  const image = property.media.find((item) => item.type === "IMAGE") ?? property.media[0];
-  return {
-    id: property.id,
-    title: property.title,
-    location: `${property.address}, ${property.city}`,
-    pricePerNight: Number(property.pricePerNight),
-    rating: 4.9,
-    imageUrl: image?.url ?? "/properties/riad-courtyard.jpg",
-    imageAlt: `${property.title} in ${property.city}`,
-    guests: property.maxGuests,
-    bedrooms: property.bedrooms,
-    tags: property.tags.map((tag) => tag.name),
-    propertyType: property.propertyType,
-  };
 }

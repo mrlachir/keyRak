@@ -34,8 +34,8 @@ use `lib/api.ts`, keeping the backend URL and JWT signing secret out of the brow
 
 ## Application routes
 
-- `/search?q=...` sends the natural-language query to Gemini through Spring Boot and uses the returned location,
-  guest count, and amenities to query `/api/properties/search`.
+- `/search?mode=ai&q=...` sends the natural-language query to Groq through Spring Boot, populates the returned
+  filter state, and then queries `/api/properties/search` through the standard search pipeline.
 - `/properties/[id]` loads live property media and blocked dates. Booking requests are submitted as `PENDING`.
 - `/admin/properties/new` is restricted to users whose synchronized backend role is `ADMIN`.
 - `/admin/dashboard` shows active inventory, pending requests, and confirmed booking value for administrators.

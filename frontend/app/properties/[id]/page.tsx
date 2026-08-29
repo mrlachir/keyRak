@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Bath, BedDouble, Check, MapPin, Star, UsersRound } from "lucide-react";
+import { ArrowLeft, Bath, BedDouble, Check, ExternalLink, MapPin, Star, UsersRound } from "lucide-react";
 
 import { BookingSidebar } from "@/components/booking/booking-sidebar";
 import { PropertyMediaViewer } from "@/components/property/property-media-viewer";
+import { PropertyStaticMapShell } from "@/components/property/property-static-map-shell";
 import { getBlockedDates, getProperty } from "@/lib/properties";
 
 export async function generateMetadata({ params }: PageProps<"/properties/[id]">): Promise<Metadata> {
@@ -81,6 +82,31 @@ export default async function PropertyPage({ params }: PageProps<"/properties/[i
               <p className="mt-5 max-w-3xl whitespace-pre-line text-base leading-8 text-sand-800">
                 {property.description ?? "This property’s full story is being prepared by the host."}
               </p>
+            </section>
+
+            <section className="border-b border-sand-200 py-9">
+              <p className="eyebrow">Where you will stay</p>
+              <h2 className="mt-2 font-serif text-3xl font-semibold text-ink">A place in {property.city}.</h2>
+              <p className="mt-3 flex items-center gap-2 text-sm font-medium text-sand-700">
+                <MapPin className="size-4 text-terracotta-600" aria-hidden="true" />
+                {property.address}, {property.city}
+              </p>
+              <div className="mt-6 overflow-hidden rounded-arch border border-sand-200 bg-sand-50 shadow-card">
+                <PropertyStaticMapShell
+                  latitude={Number(property.latitude)}
+                  longitude={Number(property.longitude)}
+                  title={property.title}
+                />
+              </div>
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${property.latitude},${property.longitude}`}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-5 inline-flex items-center gap-2 rounded-full bg-majorelle-600 px-5 py-3 text-sm font-extrabold text-white shadow-sm transition hover:bg-majorelle-700 focus:outline-none focus:ring-2 focus:ring-majorelle-500 focus:ring-offset-2"
+              >
+                View on Google Maps
+                <ExternalLink className="size-4" aria-hidden="true" />
+              </a>
             </section>
 
             <section className="py-9">

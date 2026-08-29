@@ -7,6 +7,7 @@ import "@photo-sphere-viewer/core/index.css";
 import { Footer } from "@/components/layout/footer";
 import { Navbar } from "@/components/layout/navbar";
 import { Providers } from "@/components/layout/providers";
+import { OnboardingBoundary } from "@/components/onboarding/onboarding-boundary";
 
 import "./globals.css";
 
@@ -39,9 +40,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className="h-full antialiased" data-scroll-behavior="smooth">
       <body className="flex min-h-full flex-col">
         <Providers>
-          <Navbar />
-          <main className="flex-1">{children}</main>
-          <Footer />
+          <OnboardingBoundary>
+            <Navbar />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </OnboardingBoundary>
         </Providers>
       </body>
     </html>

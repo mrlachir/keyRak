@@ -3,6 +3,7 @@ package com.keyrak.marketplace.web;
 import com.keyrak.marketplace.service.PropertyService;
 import com.keyrak.marketplace.web.dto.CreatePropertyRequest;
 import com.keyrak.marketplace.web.dto.PropertyResponse;
+import com.keyrak.marketplace.web.dto.TagOptionResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -14,7 +15,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.format.annotation.DateTimeFormat;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -35,11 +40,42 @@ public class PropertyController {
 
     @GetMapping("/search")
     public List<PropertyResponse> search(
+            @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String location,
             @RequestParam(required = false) Integer guests,
-            @RequestParam(required = false) List<String> amenities
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) Integer bedrooms,
+            @RequestParam(required = false) Integer bathrooms,
+            @RequestParam(required = false) List<String> tags,
+            @RequestParam(required = false) List<String> amenities,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkInDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkOutDate
     ) {
-        return propertyService.search(location, guests, amenities);
+        List<String> requestedTags = new ArrayList<>();
+        if (tags != null) {
+            requestedTags.addAll(tags);
+        }
+        if (amenities != null) {
+            requestedTags.addAll(amenities);
+        }
+        return propertyService.search(
+                keyword,
+                location,
+                guests,
+                minPrice,
+                maxPrice,
+                bedrooms,
+                bathrooms,
+                requestedTags,
+                checkInDate,
+                checkOutDate
+        );
+    }
+
+    @GetMapping("/tags")
+    public List<TagOptionResponse> listTags() {
+        return propertyService.listTags();
     }
 
     @PostMapping

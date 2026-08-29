@@ -44,3 +44,35 @@ export async function createBookingAction(
     };
   }
 }
+
+export async function cancelPendingBookingAction(
+  bookingId: string,
+): Promise<ActionResult<Booking>> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return { ok: false, message: "Sign in with Google to manage this reservation." };
+  }
+  if (!bookingId.trim()) {
+    return { ok: false, message: "Choose a valid reservation." };
+  }
+
+  try {
+    const booking = await apiFetch<Booking>(
+      `/api/bookings/${encodeURIComponent(bookingId)}/status`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ status: "CANCELLED" }),
+      },
+    );
+    revalidatePath("/profile");
+    revalidatePath("/admin/dashboard");
+    revalidatePath("/admin/bookings");
+    revalidatePath(`/properties/${booking.propertyId}`);
+    return { ok: true, data: booking };
+  } catch (error) {
+    return {
+      ok: false,
+      message: apiErrorMessage(error, "The reservation could not be cancelled."),
+    };
+  }
+}

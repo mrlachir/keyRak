@@ -54,6 +54,13 @@ class MarketplaceFeatureIntegrationTest {
     @Test
     void publicSearchAndBlockedDatesReturnBackendPropertyData() throws Exception {
         Property property = createProperty("Integration Villa");
+        Property excludedByPriceAndCapacity = createProperty("Budget Studio");
+        excludedByPriceAndCapacity.setPricePerNight(new BigDecimal("750.00"));
+        excludedByPriceAndCapacity.setMaxGuests(2);
+        excludedByPriceAndCapacity.setBedrooms(1);
+        excludedByPriceAndCapacity.setBathrooms(1);
+        excludedByPriceAndCapacity.setPropertyType(PropertyType.APARTMENT);
+        propertyRepository.saveAndFlush(excludedByPriceAndCapacity);
         Tag pool = tagRepository.save(Tag.builder().name("Integration Pool").build());
         property.addTag(pool);
         property.addMedia(PropertyMedia.builder()
@@ -80,23 +87,54 @@ class MarketplaceFeatureIntegrationTest {
                 .build());
 
         mockMvc.perform(get("/api/properties/search")
+                        .param("keyword", "Integration Marrakesh")
                         .param("location", "Marrakesh")
                         .param("guests", "4")
-                        .param("amenities", "Integration Pool"))
+                        .param("minPrice", "1000")
+                        .param("maxPrice", "2000")
+                        .param("bedrooms", "3")
+                        .param("bathrooms", "3")
+                        .param("tags", "Integration Pool"))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].title").value("Integration Villa"))
                 .andExpect(jsonPath("$[0].media[0].type").value("IMAGE"))
                 .andExpect(jsonPath("$[0].tags[0].name").value("Integration Pool"));
+
+        mockMvc.perform(get("/api/properties/search")
+                        .param("keyword", "apartment")
+                        .param("bedrooms", "1")
+                        .param("bathrooms", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].title").value("Budget Studio"));
+
+        mockMvc.perform(get("/api/properties/tags"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name").value("Integration Pool"));
 
         mockMvc.perform(get("/api/properties/{id}/blocked-dates", property.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.blockedDates[0]").value(checkIn.toString()))
                 .andExpect(jsonPath("$.blockedDates[1]").value(checkIn.plusDays(1).toString()));
+
+        mockMvc.perform(get("/api/properties/search")
+                        .param("checkInDate", checkIn.toString())
+                        .param("checkOutDate", checkIn.plusDays(2).toString())
+                        .param("tags", "Integration Pool"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
     }
 
     @Test
     void authenticatedBookingRequestCreatesPendingRecordWithServerPrice() throws Exception {
         Property property = propertyRepository.saveAndFlush(createProperty("Booking Integration Villa"));
+        userRepository.saveAndFlush(User.builder()
+                .googleSubject("booking-google-account")
+                .email("booking@example.com")
+                .displayName("Booking Guest")
+                .telephone("+212 622 222 222")
+                .build());
         LocalDate checkIn = LocalDate.now().plusDays(14);
 
         mockMvc.perform(post("/api/bookings")
@@ -122,6 +160,46 @@ class MarketplaceFeatureIntegrationTest {
                 .andExpect(jsonPath("$.totalPrice").value(4500.00))
                 .andExpect(jsonPath("$.adults").value(2))
                 .andExpect(jsonPath("$.children").value(1));
+    }
+
+    @Test
+    void clientCanCancelOnlyTheirPendingReservation() throws Exception {
+        Property property = propertyRepository.saveAndFlush(createProperty("Cancellation Villa"));
+        User user = userRepository.saveAndFlush(User.builder()
+                .googleSubject("cancellation-client")
+                .email("cancellation@example.com")
+                .displayName("Cancellation Client")
+                .telephone("+212 611 111 111")
+                .build());
+        LocalDate checkIn = LocalDate.now().plusDays(21);
+        Booking booking = bookingRepository.saveAndFlush(Booking.builder()
+                .user(user)
+                .property(property)
+                .checkInDate(checkIn)
+                .checkOutDate(checkIn.plusDays(2))
+                .adults(2)
+                .children(0)
+                .totalPrice(new BigDecimal("3000.00"))
+                .status(BookingStatus.PENDING)
+                .build());
+
+        mockMvc.perform(patch("/api/bookings/{bookingId}/status", booking.getId())
+                        .with(jwt().jwt(token -> token
+                                .subject("cancellation-client")
+                                .claim("email", "cancellation@example.com")
+                                .claim("email_verified", true)
+                                .claim("name", "Cancellation Client")
+                                .claim("roles", java.util.List.of("CLIENT"))))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"status": "CANCELLED"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"));
+
+        mockMvc.perform(get("/api/properties/{id}/blocked-dates", property.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.blockedDates.length()").value(0));
     }
 
     @Test

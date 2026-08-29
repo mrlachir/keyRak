@@ -1,8 +1,10 @@
 "use client";
 
-import { CheckCircle2, ImagePlus, LoaderCircle, Sparkles, WandSparkles } from "lucide-react";
+import dynamic from "next/dynamic";
+import { CheckCircle2, ImagePlus, LoaderCircle, MapPin, Sparkles, WandSparkles } from "lucide-react";
 import Link from "next/link";
-import { FormEvent, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
+import type { FormEvent } from "react";
 import { toast } from "sonner";
 
 import {
@@ -12,6 +14,18 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { CreatePropertyRequest, PropertyType } from "@/types";
+
+const PropertyLocationMap = dynamic(
+  () => import("@/components/admin/property-location-map"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="grid h-72 place-items-center rounded-2xl bg-olive-50 text-sm font-bold text-olive-800">
+        <LoaderCircle className="mr-2 inline size-5 animate-spin" aria-hidden="true" /> Loading location map…
+      </div>
+    ),
+  },
+);
 
 const amenityOptions = [
   "Private pool",
@@ -85,6 +99,11 @@ export function AdminPropertyForm() {
         ? current.filter((item) => item !== amenity)
         : [...current, amenity],
     );
+  };
+
+  const updateCoordinates = (latitude: number, longitude: number) => {
+    update("latitude", latitude.toFixed(7));
+    update("longitude", longitude.toFixed(7));
   };
 
   const generateDescription = () => {
@@ -225,6 +244,20 @@ export function AdminPropertyForm() {
             Longitude
             <input className={inputClass} type="number" step="0.0000001" min="-180" max="180" value={form.longitude} onChange={(event) => update("longitude", event.target.value)} required />
           </label>
+          <div className="sm:col-span-2">
+            <div className="flex items-center gap-2 text-sm font-bold text-ink">
+              <MapPin className="size-4 text-terracotta-600" aria-hidden="true" />
+              Drop the property pin
+            </div>
+            <p className="mt-1 text-xs leading-5 text-sand-600">Click anywhere on the map to fill the latitude and longitude fields.</p>
+            <div className="mt-3 overflow-hidden rounded-2xl border border-sand-200">
+              <PropertyLocationMap
+                latitude={numberValue(form.latitude)}
+                longitude={numberValue(form.longitude)}
+                onCoordinatesChange={updateCoordinates}
+              />
+            </div>
+          </div>
         </div>
       </section>
 

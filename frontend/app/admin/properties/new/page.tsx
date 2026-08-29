@@ -23,7 +23,7 @@ export default async function NewPropertyPage() {
           <p className="eyebrow">Admin property studio</p>
           <h1 className="mt-3 font-serif text-5xl font-semibold leading-none text-ink sm:text-6xl">Create a stay worth discovering.</h1>
           <p className="mt-5 text-base leading-7 text-sand-700">
-            Define the facts, attach each media mode, and let Gemini prepare an accurate first draft from the amenities you select.
+            Define the facts, attach each media mode, and let Groq prepare a polished first draft from the amenities you select.
           </p>
         </div>
         <div className="mt-10"><AdminPropertyForm /></div>

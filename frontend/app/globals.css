@@ -84,6 +84,46 @@ select {
     color: inherit;
     text-decoration: inherit;
   }
+
+  .keyrak-map-marker-wrap {
+    width: auto !important;
+    height: auto !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+
+  .keyrak-map-marker {
+    display: inline-flex;
+    min-width: 5.6rem;
+    min-height: 2.25rem;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid white;
+    border-radius: 9999px;
+    background: theme("colors.majorelle.600");
+    padding: 0.45rem 0.7rem;
+    color: white;
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.7rem;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+    box-shadow: 0 12px 28px -12px rgba(28, 29, 65, 0.75);
+  }
+
+  .keyrak-map-marker:hover {
+    background: theme("colors.terracotta.600");
+  }
+
+  .leaflet-popup-content-wrapper,
+  .leaflet-popup-tip {
+    background: theme("colors.sand.50");
+  }
+
+  .leaflet-popup-content-wrapper {
+    border-radius: 1rem;
+    box-shadow: 0 20px 55px -24px rgba(49, 20, 15, 0.45);
+  }
 }
 
 @layer utilities {

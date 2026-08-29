@@ -11,7 +11,7 @@ import java.time.Duration;
 public class HttpClientConfig {
 
     @Bean
-    public RestTemplate geminiRestTemplate(RestTemplateBuilder builder) {
+    public RestTemplate groqRestTemplate(RestTemplateBuilder builder) {
         return builder
                 .setConnectTimeout(Duration.ofSeconds(10))
                 .setReadTimeout(Duration.ofSeconds(45))

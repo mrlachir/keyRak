@@ -1,8 +1,8 @@
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, BedDouble, Star, UsersRound } from "lucide-react";
 
 import { cn, formatPrice } from "@/lib/utils";
+import { PropertyImage } from "@/components/property/property-image";
 import type { PropertyCardData } from "@/types";
 
 export function PropertyCard({
@@ -25,7 +25,7 @@ export function PropertyCard({
         href={`/properties/${property.id}`}
         className={cn("relative block overflow-hidden", compact ? "min-h-52 sm:min-h-full" : "aspect-[4/3]")}
       >
-        <Image
+        <PropertyImage
           src={property.imageUrl}
           alt={property.imageAlt}
           fill
