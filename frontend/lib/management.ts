@@ -1,7 +1,10 @@
 import "server-only";
 
+import { getServerSession } from "next-auth";
+
 import { apiFetch } from "@/lib/api";
 import { requireAdminSession, requireAuthenticatedSession } from "@/lib/access";
+import { authOptions } from "@/lib/auth";
 import type { AdminBooking, AdminDashboardMetrics, Trip, UserProfileResponse } from "@/types";
 
 export async function getAdminDashboardMetrics(): Promise<AdminDashboardMetrics> {
@@ -22,4 +25,14 @@ export async function getMyTrips(): Promise<Trip[]> {
 export async function getMyProfile(): Promise<UserProfileResponse> {
   await requireAuthenticatedSession("/profile");
   return apiFetch<UserProfileResponse>("/api/users/me");
+}
+
+export async function getOptionalProfile(): Promise<UserProfileResponse | null> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return null;
+  try {
+    return await apiFetch<UserProfileResponse>("/api/users/me");
+  } catch {
+    return null;
+  }
 }

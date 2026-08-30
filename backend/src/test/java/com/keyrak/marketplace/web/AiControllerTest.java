@@ -2,6 +2,8 @@ package com.keyrak.marketplace.web;
 
 import com.keyrak.marketplace.service.AiService;
 import com.keyrak.marketplace.web.dto.AiSearchResponse;
+import com.keyrak.marketplace.web.dto.AiDescriptionRequest;
+import com.keyrak.marketplace.domain.enumeration.PropertyType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -61,10 +63,9 @@ class AiControllerTest {
 
     @Test
     void descriptionEndpointReturnsRawGroqCopyInsideTheExistingClientDto() throws Exception {
-        when(aiService.generatePropertyDescription(
-                "Title: Atlas Villa; Type: VILLA; City: Marrakesh; Maximum guests: 6; "
-                        + "Bedrooms: 3; Bathrooms: 2; Amenities: Private pool, Garden"
-        )).thenReturn("A private Marrakesh retreat designed for effortless luxury.");
+        AiDescriptionRequest facts = new AiDescriptionRequest("Atlas Villa", PropertyType.VILLA, "Marrakesh",
+                "Route de l'Ourika", new BigDecimal("2500"), 6, 3, 2, List.of("Private pool", "Garden"));
+        when(aiService.generatePropertyDescription(facts)).thenReturn("A private Marrakesh retreat designed for effortless luxury.");
 
         mockMvc.perform(post("/api/ai/description")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -73,6 +74,8 @@ class AiControllerTest {
                                   "title": "Atlas Villa",
                                   "propertyType": "VILLA",
                                   "city": "Marrakesh",
+                                  "address": "Route de l'Ourika",
+                                  "pricePerNight": 2500,
                                   "maxGuests": 6,
                                   "bedrooms": 3,
                                   "bathrooms": 2,
@@ -83,9 +86,6 @@ class AiControllerTest {
                 .andExpect(jsonPath("$.description")
                         .value("A private Marrakesh retreat designed for effortless luxury."));
 
-        verify(aiService).generatePropertyDescription(
-                "Title: Atlas Villa; Type: VILLA; City: Marrakesh; Maximum guests: 6; "
-                        + "Bedrooms: 3; Bathrooms: 2; Amenities: Private pool, Garden"
-        );
+        verify(aiService).generatePropertyDescription(facts);
     }
 }

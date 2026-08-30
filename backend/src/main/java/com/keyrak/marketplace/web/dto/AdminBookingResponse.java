@@ -2,6 +2,7 @@ package com.keyrak.marketplace.web.dto;
 
 import com.keyrak.marketplace.domain.entity.Booking;
 import com.keyrak.marketplace.domain.enumeration.BookingStatus;
+import com.keyrak.marketplace.domain.enumeration.PaymentMethod;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -15,6 +16,7 @@ public record AdminBookingResponse(
         UUID userId,
         String guestName,
         String guestEmail,
+        String guestTelephone,
         LocalDate checkInDate,
         LocalDate checkOutDate,
         int adults,
@@ -22,6 +24,9 @@ public record AdminBookingResponse(
         String specialRequests,
         BigDecimal totalPrice,
         BookingStatus status,
+        PaymentMethod paymentMethod,
+        boolean guestHasIdCard,
+        Boolean cancellationRequested,
         Instant createdAt,
         Instant updatedAt
 ) {
@@ -33,6 +38,7 @@ public record AdminBookingResponse(
                 booking.getUser().getId(),
                 booking.getUser().getDisplayName(),
                 booking.getUser().getEmail(),
+                booking.getUser().getTelephone(),
                 booking.getCheckInDate(),
                 booking.getCheckOutDate(),
                 booking.getAdults(),
@@ -40,6 +46,9 @@ public record AdminBookingResponse(
                 booking.getSpecialRequests(),
                 booking.getTotalPrice(),
                 booking.getStatus(),
+                booking.getPaymentMethod(),
+                booking.getUser().getIdCardUrl() != null && !booking.getUser().getIdCardUrl().isBlank(),
+                Boolean.TRUE.equals(booking.getCancellationRequested()),
                 booking.getCreatedAt(),
                 booking.getUpdatedAt()
         );

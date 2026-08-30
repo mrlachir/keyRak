@@ -29,7 +29,8 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
   const headers = new Headers(suppliedHeaders);
   headers.set("Accept", "application/json");
 
-  if (requestInit.body && !headers.has("Content-Type")) {
+  const hasMultipartBody = typeof FormData !== "undefined" && requestInit.body instanceof FormData;
+  if (requestInit.body && !hasMultipartBody && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 

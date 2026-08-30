@@ -1,5 +1,6 @@
 package com.keyrak.marketplace.web.dto;
 
+import com.keyrak.marketplace.domain.enumeration.PaymentMethod;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.Max;
@@ -16,6 +17,7 @@ public record CreateBookingRequest(
         @NotNull @Future LocalDate checkOutDate,
         @NotNull @Min(1) @Max(100) Integer adults,
         @NotNull @Min(0) @Max(100) Integer children,
+        @NotNull PaymentMethod paymentMethod,
         @Size(max = 2_000) String specialRequests
 ) {
 }

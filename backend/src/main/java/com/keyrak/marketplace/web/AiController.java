@@ -40,6 +40,6 @@ public class AiController {
     public AiDescriptionResponse generateDescription(
             @Valid @RequestBody AiDescriptionRequest request
     ) {
-        return new AiDescriptionResponse(aiService.generatePropertyDescription(request.toPropertyFacts()));
+        return new AiDescriptionResponse(aiService.generatePropertyDescription(request));
     }
 }

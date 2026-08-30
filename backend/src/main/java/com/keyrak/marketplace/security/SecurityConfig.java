@@ -49,6 +49,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/properties/**", "/api/tags/**", "/api/media/**")
                         .permitAll()
+                        .requestMatchers(HttpMethod.GET, "/uploads/property-media/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/ai/search").permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated())

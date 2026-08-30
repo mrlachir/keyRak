@@ -3,6 +3,7 @@ package com.keyrak.marketplace.web;
 import com.keyrak.marketplace.service.BookingService;
 import com.keyrak.marketplace.web.dto.AdminBookingResponse;
 import com.keyrak.marketplace.web.dto.AdminDashboardResponse;
+import com.keyrak.marketplace.web.dto.CancellationDecisionRequest;
 import com.keyrak.marketplace.web.dto.UpdateBookingStatusRequest;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -34,7 +35,7 @@ public class AdminController {
 
     @GetMapping("/bookings")
     public List<AdminBookingResponse> getPendingBookings() {
-        return bookingService.getPendingBookings();
+        return bookingService.getAdminReviewQueue();
     }
 
     @PatchMapping("/bookings/{bookingId}/status")
@@ -43,5 +44,13 @@ public class AdminController {
             @Valid @RequestBody UpdateBookingStatusRequest request
     ) {
         return bookingService.updatePendingStatus(bookingId, request.status());
+    }
+
+    @PatchMapping("/bookings/{bookingId}/cancellation-request")
+    public AdminBookingResponse moderateCancellationRequest(
+            @PathVariable UUID bookingId,
+            @Valid @RequestBody CancellationDecisionRequest request
+    ) {
+        return bookingService.moderateCancellationRequest(bookingId, request.approved());
     }
 }

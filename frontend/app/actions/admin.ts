@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { apiErrorMessage, apiFetch } from "@/lib/api";
 import { authOptions } from "@/lib/auth";
+import { mediaGroups, validatePropertyMedia, type MediaFiles } from "@/lib/media-inputs";
 import type {
   ActionResult,
   AiDescriptionRequest,
@@ -53,13 +54,44 @@ export async function updateBookingStatusAction(
   }
 }
 
+export async function moderateCancellationRequestAction(
+  bookingId: string,
+  approved: boolean,
+): Promise<ActionResult<AdminBooking>> {
+  const authorizationError = await verifyAdmin();
+  if (authorizationError) return { ok: false, message: authorizationError };
+  if (!bookingId.trim()) {
+    return { ok: false, message: "Choose a valid cancellation request." };
+  }
+
+  try {
+    const booking = await apiFetch<AdminBooking>(
+      `/api/admin/bookings/${encodeURIComponent(bookingId)}/cancellation-request`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ approved }),
+      },
+    );
+    revalidatePath("/admin/dashboard");
+    revalidatePath("/admin/bookings");
+    revalidatePath("/profile");
+    revalidatePath(`/properties/${booking.propertyId}`);
+    return { ok: true, data: booking };
+  } catch (error) {
+    return {
+      ok: false,
+      message: apiErrorMessage(error, "The cancellation decision could not be saved."),
+    };
+  }
+}
+
 export async function generatePropertyDescriptionAction(
   input: AiDescriptionRequest,
 ): Promise<ActionResult<AiDescriptionResponse>> {
   const authorizationError = await verifyAdmin();
   if (authorizationError) return { ok: false, message: authorizationError };
-  if (!input.title.trim() || input.amenities.length === 0) {
-    return { ok: false, message: "Add a title and at least one amenity before generating copy." };
+  if (!input.title.trim() || !input.city.trim()) {
+    return { ok: false, message: "Add a title and city before generating copy." };
   }
 
   try {
@@ -77,21 +109,48 @@ export async function generatePropertyDescriptionAction(
 }
 
 export async function createPropertyAction(
-  input: CreatePropertyRequest,
+  formData: FormData,
 ): Promise<ActionResult<Property>> {
   const authorizationError = await verifyAdmin();
   if (authorizationError) return { ok: false, message: authorizationError };
-  if (!input.title.trim() || !input.description.trim() || input.media.length === 0) {
-    return { ok: false, message: "Title, description, and at least one image are required." };
+
+  const propertyJson = formData.get("property");
+  let input: CreatePropertyRequest;
+  try {
+    const parsed: unknown = JSON.parse(String(propertyJson ?? ""));
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return { ok: false, message: "Property details could not be read." };
+    }
+    input = parsed as CreatePropertyRequest;
+  } catch {
+    return { ok: false, message: "Property details could not be read." };
   }
-  if (input.maxGuests < 1 || input.pricePerNight <= 0) {
+  const files: MediaFiles = { IMAGE: [], IMAGE_360: [], VIDEO: [] };
+  for (const group of mediaGroups) {
+    files[group.type] = formData.getAll(group.part).filter((value): value is File => value instanceof File && value.size > 0);
+  }
+  if (typeof input.title !== "string" || typeof input.description !== "string" || !input.title.trim() || !input.description.trim()) {
+    return { ok: false, message: "Title and description are required." };
+  }
+  if (!Number.isFinite(input.maxGuests) || !Number.isFinite(input.pricePerNight) || input.maxGuests < 1 || input.pricePerNight <= 0) {
     return { ok: false, message: "Price and guest capacity must be greater than zero." };
   }
+  const mediaError = validatePropertyMedia(input.media ?? [], files);
+  if (mediaError) return { ok: false, message: mediaError };
 
   try {
+    const multipartBody = new FormData();
+    multipartBody.set(
+      "property",
+      new Blob([JSON.stringify(input)], { type: "application/json" }),
+      "property.json",
+    );
+    for (const group of mediaGroups) {
+      files[group.type].forEach(file => multipartBody.append(group.part, file, file.name));
+    }
     const property = await apiFetch<Property>("/api/properties", {
       method: "POST",
-      body: JSON.stringify(input),
+      body: multipartBody,
     });
     revalidatePath("/search");
     revalidatePath("/admin/dashboard");

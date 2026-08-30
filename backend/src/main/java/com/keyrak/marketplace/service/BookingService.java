@@ -15,6 +15,7 @@ import com.keyrak.marketplace.web.dto.TripResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
@@ -68,7 +69,7 @@ public class BookingService {
     }
 
     @Transactional
-    public BookingResponse create(CreateBookingRequest request, String googleSubject) {
+    public BookingResponse create(CreateBookingRequest request, MultipartFile idCard, String googleSubject) {
         Property property = propertyRepository.findByIdForUpdate(request.propertyId())
                 .filter(Property::isActive)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Property not found"));
@@ -104,6 +105,11 @@ public class BookingService {
 
         long nights = ChronoUnit.DAYS.between(request.checkInDate(), request.checkOutDate());
         BigDecimal totalPrice = property.getPricePerNight().multiply(BigDecimal.valueOf(nights));
+        if (idCard != null && !idCard.isEmpty()) {
+            user = userService.updateIdCard(googleSubject, idCard);
+        } else if (!userService.hasIdCard(user)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Upload a government ID to your profile before booking");
+        }
         Booking booking = Booking.builder()
                 .property(property)
                 .user(user)
@@ -114,6 +120,8 @@ public class BookingService {
                 .specialRequests(normalizeSpecialRequests(request.specialRequests()))
                 .totalPrice(totalPrice)
                 .status(BookingStatus.PENDING)
+                .paymentMethod(request.paymentMethod())
+                .cancellationRequested(false)
                 .build();
         return BookingResponse.from(bookingRepository.saveAndFlush(booking));
     }
@@ -137,8 +145,8 @@ public class BookingService {
     }
 
     @Transactional(readOnly = true)
-    public List<AdminBookingResponse> getPendingBookings() {
-        return bookingRepository.findByStatusOrderByCreatedAtAsc(BookingStatus.PENDING)
+    public List<AdminBookingResponse> getAdminReviewQueue() {
+        return bookingRepository.findAdminReviewQueue()
                 .stream()
                 .map(AdminBookingResponse::from)
                 .toList();
@@ -160,6 +168,7 @@ public class BookingService {
         }
 
         booking.setStatus(requestedStatus);
+        booking.setCancellationRequested(false);
         return AdminBookingResponse.from(bookingRepository.saveAndFlush(booking));
     }
 
@@ -178,7 +187,49 @@ public class BookingService {
         }
 
         booking.setStatus(BookingStatus.CANCELLED);
+        booking.setCancellationRequested(false);
         return BookingResponse.from(bookingRepository.saveAndFlush(booking));
+    }
+
+    @Transactional
+    public BookingResponse requestCancellation(UUID bookingId, String googleSubject) {
+        Booking booking = ownedBookingForUpdate(bookingId, googleSubject);
+        if (booking.getStatus() != BookingStatus.CONFIRMED) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Only confirmed reservations can submit a cancellation request"
+            );
+        }
+        if (!Boolean.TRUE.equals(booking.getCancellationRequested())) {
+            booking.setCancellationRequested(true);
+            booking = bookingRepository.saveAndFlush(booking);
+        }
+        return BookingResponse.from(booking);
+    }
+
+    @Transactional
+    public AdminBookingResponse moderateCancellationRequest(UUID bookingId, boolean approved) {
+        Booking booking = bookingRepository.findByIdForUpdate(bookingId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
+        if (booking.getStatus() != BookingStatus.CONFIRMED
+                || !Boolean.TRUE.equals(booking.getCancellationRequested())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This cancellation request is no longer pending");
+        }
+
+        booking.setCancellationRequested(false);
+        if (approved) {
+            booking.setStatus(BookingStatus.CANCELLED);
+        }
+        return AdminBookingResponse.from(bookingRepository.saveAndFlush(booking));
+    }
+
+    private Booking ownedBookingForUpdate(UUID bookingId, String googleSubject) {
+        Booking booking = bookingRepository.findByIdForUpdate(bookingId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
+        if (!googleSubject.equals(booking.getUser().getGoogleSubject())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found");
+        }
+        return booking;
     }
 
     private String normalizeSpecialRequests(String value) {

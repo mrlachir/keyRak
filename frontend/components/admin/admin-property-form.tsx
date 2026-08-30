@@ -12,8 +12,10 @@ import {
   generatePropertyDescriptionAction,
 } from "@/app/actions/admin";
 import { Button } from "@/components/ui/button";
+import { PropertyMediaInput } from "@/components/admin/property-media-input";
+import { mediaGroups, parseMediaLinks, validatePropertyMedia, type MediaFiles } from "@/lib/media-inputs";
 import { cn } from "@/lib/utils";
-import type { CreatePropertyRequest, PropertyType } from "@/types";
+import type { CreatePropertyRequest, PropertyMediaType, PropertyType } from "@/types";
 
 const PropertyLocationMap = dynamic(
   () => import("@/components/admin/property-location-map"),
@@ -55,9 +57,6 @@ interface FormState {
   maxGuests: string;
   bedrooms: string;
   bathrooms: string;
-  imageUrl: string;
-  panoramaUrl: string;
-  videoUrl: string;
 }
 
 const initialForm: FormState = {
@@ -72,9 +71,6 @@ const initialForm: FormState = {
   maxGuests: "2",
   bedrooms: "1",
   bathrooms: "1",
-  imageUrl: "",
-  panoramaUrl: "",
-  videoUrl: "",
 };
 
 function numberValue(value: string): number {
@@ -84,6 +80,8 @@ function numberValue(value: string): number {
 export function AdminPropertyForm() {
   const [form, setForm] = useState<FormState>(initialForm);
   const [amenities, setAmenities] = useState<string[]>([]);
+  const [mediaFiles, setMediaFiles] = useState<MediaFiles>({ IMAGE: [], IMAGE_360: [], VIDEO: [] });
+  const [mediaUrls, setMediaUrls] = useState<Record<PropertyMediaType, string>>({ IMAGE: "", IMAGE_360: "", VIDEO: "" });
   const [message, setMessage] = useState<string | null>(null);
   const [createdPropertyId, setCreatedPropertyId] = useState<string | null>(null);
   const [isGenerating, startGenerating] = useTransition();
@@ -107,9 +105,10 @@ export function AdminPropertyForm() {
   };
 
   const generateDescription = () => {
+    if (isGenerating || isSaving) return;
     setMessage(null);
-    if (!form.title.trim() || amenities.length === 0) {
-      const validationMessage = "Add the property title and select at least one amenity first.";
+    if (!form.title.trim() || !form.city.trim()) {
+      const validationMessage = "Add the property title and city first. Any other completed fields will inform the description.";
       setMessage(validationMessage);
       toast.error(validationMessage);
       return;
@@ -119,9 +118,11 @@ export function AdminPropertyForm() {
         title: form.title,
         propertyType: form.propertyType,
         city: form.city,
-        maxGuests: numberValue(form.maxGuests),
-        bedrooms: numberValue(form.bedrooms),
-        bathrooms: numberValue(form.bathrooms),
+        address: form.address.trim() || null,
+        pricePerNight: form.pricePerNight.trim() ? numberValue(form.pricePerNight) : null,
+        maxGuests: form.maxGuests.trim() ? numberValue(form.maxGuests) : null,
+        bedrooms: form.bedrooms.trim() ? numberValue(form.bedrooms) : null,
+        bathrooms: form.bathrooms.trim() ? numberValue(form.bathrooms) : null,
         amenities,
       });
       if (!result.ok) {
@@ -139,6 +140,7 @@ export function AdminPropertyForm() {
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (isSaving) return;
     setMessage(null);
     setCreatedPropertyId(null);
 
@@ -156,10 +158,17 @@ export function AdminPropertyForm() {
       toast.error(validationMessage);
       return;
     }
-    if (!form.title.trim() || !form.description.trim() || !form.address.trim() || !form.imageUrl.trim()) {
-      const validationMessage = "Title, description, address, and a primary image are required.";
+    if (!form.title.trim() || !form.description.trim() || !form.address.trim()) {
+      const validationMessage = "Title, description, and address are required.";
       setMessage(validationMessage);
       toast.error(validationMessage);
+      return;
+    }
+    const linkedMedia = parseMediaLinks(mediaUrls);
+    const mediaError = validatePropertyMedia(linkedMedia, mediaFiles);
+    if (mediaError) {
+      setMessage(mediaError);
+      toast.error(mediaError);
       return;
     }
     if (numberValue(form.pricePerNight) <= 0 || numberValue(form.maxGuests) < 1) {
@@ -168,16 +177,6 @@ export function AdminPropertyForm() {
       toast.error(validationMessage);
       return;
     }
-
-    const media: CreatePropertyRequest["media"] = [
-      { url: form.imageUrl.trim(), type: "IMAGE", displayOrder: 0 },
-      ...(form.panoramaUrl.trim()
-        ? [{ url: form.panoramaUrl.trim(), type: "IMAGE_360" as const, displayOrder: 1 }]
-        : []),
-      ...(form.videoUrl.trim()
-        ? [{ url: form.videoUrl.trim(), type: "VIDEO" as const, displayOrder: 2 }]
-        : []),
-    ];
 
     const payload: CreatePropertyRequest = {
       title: form.title.trim(),
@@ -193,11 +192,16 @@ export function AdminPropertyForm() {
       bathrooms: numberValue(form.bathrooms),
       active: true,
       tagNames: amenities,
-      media,
+      media: linkedMedia,
     };
 
     startSaving(async () => {
-      const result = await createPropertyAction(payload);
+      const formData = new FormData();
+      formData.set("property", JSON.stringify(payload));
+      for (const group of mediaGroups) {
+        mediaFiles[group.type].forEach(file => formData.append(group.part, file, file.name));
+      }
+      const result = await createPropertyAction(formData);
       if (!result.ok) {
         setMessage(result.message);
         toast.error(result.message);
@@ -304,7 +308,7 @@ export function AdminPropertyForm() {
             onChange={(event) => update("description", event.target.value)}
             maxLength={10_000}
             required
-            placeholder="Write the property story or generate a first draft from the selected amenities."
+            placeholder="Write the property story or generate a first draft from all the property details above and below."
           />
         </label>
       </section>
@@ -323,12 +327,17 @@ export function AdminPropertyForm() {
         <div className="rounded-3xl border border-sand-200 bg-sand-50 p-5 shadow-card sm:p-7">
           <div className="flex items-center gap-3">
             <span className="grid size-10 place-items-center rounded-full bg-terracotta-100 text-terracotta-700"><ImagePlus className="size-5" /></span>
-            <div><p className="eyebrow">Media URLs</p><p className="text-xs text-sand-600">Use durable hosted URLs for production media.</p></div>
+            <div><p className="eyebrow">Property media</p><p className="text-xs text-sand-600">Upload files, paste links, or combine both.</p></div>
           </div>
           <div className="mt-5 space-y-4">
-            <label className="block text-sm font-bold text-ink">Primary image<input className={inputClass} value={form.imageUrl} onChange={(event) => update("imageUrl", event.target.value)} maxLength={2048} required placeholder="https://… or /uploads/property.jpg" /></label>
-            <label className="block text-sm font-bold text-ink">360° equirectangular image<input className={inputClass} value={form.panoramaUrl} onChange={(event) => update("panoramaUrl", event.target.value)} maxLength={2048} placeholder="https://…/panorama.jpg" /></label>
-            <label className="block text-sm font-bold text-ink">Property video<input className={inputClass} value={form.videoUrl} onChange={(event) => update("videoUrl", event.target.value)} maxLength={2048} placeholder="https://…/film.mp4" /></label>
+            {mediaGroups.map(group => (
+              <PropertyMediaInput key={group.type} label={group.label} hint={group.hint} accept={group.accept}
+                files={mediaFiles[group.type]} urls={mediaUrls[group.type]} disabled={isSaving}
+                onFilesChange={files => setMediaFiles(current => ({ ...current, [group.type]: files }))}
+                onUrlsChange={urls => setMediaUrls(current => ({ ...current, [group.type]: urls }))} />
+            ))}
+            <p className="text-xs leading-5 text-sand-600">The first linked photo is the cover when links are provided; otherwise the first uploaded photo is used. External media must allow public access and cross-origin loading for 360° tours.</p>
+            <p className="text-xs leading-5 text-sand-600">Combined limit: 150 MB. Property media is public once published; do not upload private documents here.</p>
           </div>
         </div>
       </section>

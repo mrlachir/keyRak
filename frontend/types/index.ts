@@ -3,6 +3,7 @@ export type UserRole = "CLIENT" | "ADMIN";
 export type PropertyType = "VILLA" | "APARTMENT" | "HOUSE";
 export type PropertyMediaType = "IMAGE" | "VIDEO" | "IMAGE_360";
 export type BookingStatus = "PENDING" | "CONFIRMED" | "CANCELLED";
+export type PaymentMethod = "CREDIT_CARD" | "CASH_ON_ARRIVAL";
 export type SearchMode = "standard" | "ai";
 
 export interface User {
@@ -11,6 +12,7 @@ export interface User {
   email: string;
   displayName?: string | null;
   telephone?: string | null;
+  idCardUrl?: string | null;
   avatarUrl?: string | null;
   role: UserRole;
   createdAt: string;
@@ -22,6 +24,7 @@ export interface UserProfileResponse {
   email: string;
   displayName?: string | null;
   telephone?: string | null;
+  idCardUrl?: string | null;
   avatarUrl?: string | null;
   role: UserRole;
 }
@@ -71,6 +74,8 @@ export interface Booking {
   specialRequests?: string | null;
   totalPrice: number;
   status: BookingStatus;
+  paymentMethod?: PaymentMethod | null;
+  cancellationRequested: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -88,6 +93,7 @@ export interface AdminBooking {
   userId: UUID;
   guestName?: string | null;
   guestEmail: string;
+  guestTelephone?: string | null;
   checkInDate: string;
   checkOutDate: string;
   adults: number;
@@ -95,6 +101,9 @@ export interface AdminBooking {
   specialRequests?: string | null;
   totalPrice: number;
   status: BookingStatus;
+  paymentMethod?: PaymentMethod | null;
+  guestHasIdCard: boolean;
+  cancellationRequested: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -111,6 +120,8 @@ export interface Trip {
   children: number;
   totalPrice: number;
   status: BookingStatus;
+  paymentMethod?: PaymentMethod | null;
+  cancellationRequested: boolean;
   createdAt: string;
 }
 
@@ -163,9 +174,11 @@ export interface AiDescriptionRequest {
   title: string;
   propertyType: PropertyType;
   city: string;
-  maxGuests: number;
-  bedrooms: number;
-  bathrooms: number;
+  address?: string | null;
+  pricePerNight?: number | null;
+  maxGuests: number | null;
+  bedrooms: number | null;
+  bathrooms: number | null;
   amenities: string[];
 }
 
@@ -183,6 +196,7 @@ export interface CreateBookingRequest {
   checkOutDate: string;
   adults: number;
   children: number;
+  paymentMethod: PaymentMethod;
   specialRequests?: string;
 }
 
@@ -200,11 +214,24 @@ export interface CreatePropertyRequest {
   bathrooms: number;
   active: boolean;
   tagNames: string[];
-  media: Array<{
-    url: string;
-    type: PropertyMediaType;
-    displayOrder: number;
-  }>;
+  media?: Array<{ url: string; type: PropertyMediaType; displayOrder: number }>;
+}
+
+export interface Review {
+  id: UUID;
+  propertyId: UUID;
+  authorId: UUID;
+  authorName: string;
+  authorAvatarUrl?: string | null;
+  rating: number;
+  comment: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateReviewRequest {
+  rating: number;
+  comment: string;
 }
 
 export type ActionResult<T> =

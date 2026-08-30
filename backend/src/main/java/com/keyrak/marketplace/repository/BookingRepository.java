@@ -26,6 +26,16 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
     @EntityGraph(attributePaths = {"property", "user"})
     List<Booking> findByStatusOrderByCreatedAtAsc(BookingStatus status);
 
+    @EntityGraph(attributePaths = {"property", "user"})
+    @Query("""
+            select booking from Booking booking
+            where booking.status = com.keyrak.marketplace.domain.enumeration.BookingStatus.PENDING
+               or (booking.status = com.keyrak.marketplace.domain.enumeration.BookingStatus.CONFIRMED
+                   and booking.cancellationRequested = true)
+            order by booking.createdAt asc
+            """)
+    List<Booking> findAdminReviewQueue();
+
     @EntityGraph(attributePaths = {"property", "property.media"})
     List<Booking> findByUserGoogleSubjectOrderByCheckInDateDesc(String googleSubject);
 
@@ -43,6 +53,13 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
     List<Booking> findByPropertyIdAndStatusInAndCheckOutDateAfterOrderByCheckInDateAsc(
             UUID propertyId,
             Collection<BookingStatus> statuses,
+            LocalDate date
+    );
+
+    boolean existsByPropertyIdAndUserIdAndStatusAndCheckInDateLessThanEqual(
+            UUID propertyId,
+            UUID userId,
+            BookingStatus status,
             LocalDate date
     );
 }

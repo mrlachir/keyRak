@@ -3,6 +3,8 @@ package com.keyrak.marketplace.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.keyrak.marketplace.config.GroqProperties;
 import com.keyrak.marketplace.web.dto.AiSearchResponse;
+import com.keyrak.marketplace.web.dto.AiDescriptionRequest;
+import com.keyrak.marketplace.domain.enumeration.PropertyType;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -11,6 +13,8 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
+import java.math.BigDecimal;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -26,10 +30,12 @@ class AiServiceTest {
     private static final URI ENDPOINT = URI.create("https://example.test/openai/v1/chat/completions");
 
     @Test
-    void propertyDescriptionUsesGroqCopywritingPayloadAndExtractsMessageContent() {
+    void propertyDescriptionUsesFullJsonContextAndExtractsMessageContent() throws Exception {
         RestTemplate restTemplate = new RestTemplate();
         MockRestServiceServer server = MockRestServiceServer.bindTo(restTemplate).build();
         AiService aiService = service(restTemplate);
+        AiDescriptionRequest facts = new AiDescriptionRequest("Atlas Villa", PropertyType.VILLA, "Agadir",
+                "Jnan Awrad 12", new BigDecimal("1500"), 6, 3, 2, List.of("Private pool", "Garden"));
 
         server.expect(once(), requestTo(ENDPOINT))
                 .andExpect(method(HttpMethod.POST))
@@ -41,13 +47,13 @@ class AiServiceTest {
                 .andExpect(jsonPath("$.messages[0].content")
                         .value(containsString("expert real estate copywriter")))
                 .andExpect(jsonPath("$.messages[1].role").value("user"))
-                .andExpect(jsonPath("$.messages[1].content").value("Villa facts and amenities"))
+                .andExpect(jsonPath("$.messages[1].content").value(new ObjectMapper().writeValueAsString(facts)))
                 .andRespond(withSuccess(
                         "{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"A luxurious villa framed by tranquil gardens.\"}}]}",
                         MediaType.APPLICATION_JSON
                 ));
 
-        assertThat(aiService.generatePropertyDescription("Villa facts and amenities"))
+        assertThat(aiService.generatePropertyDescription(facts))
                 .isEqualTo("A luxurious villa framed by tranquil gardens.");
         server.verify();
     }

@@ -35,7 +35,7 @@ export function PanoramaViewer({ src, title }: { src: string; title: string }) {
   }, [src, title]);
 
   return (
-    <div className="relative h-full min-h-[22rem] w-full bg-ink" role="region" aria-label={`${title} interactive 360 degree tour`}>
+    <div className="relative h-full min-h-64 w-full bg-ink sm:min-h-[22rem]" role="region" aria-label={`${title} interactive 360 degree tour`}>
       <div ref={container} className="absolute inset-0" />
       {status === "loading" && (
         <div className="absolute inset-0 grid place-items-center bg-ink text-sand-100">

@@ -15,6 +15,10 @@ spring:
         format_sql: true
         jdbc:
           time_zone: UTC
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 160MB
 
 server:
   port: ${SERVER_PORT:8080}
@@ -36,3 +40,7 @@ app:
       api-key: ${GROQ_API_KEY}
       model: ${GROQ_MODEL:openai/gpt-oss-20b}
       endpoint: https://api.groq.com/openai/v1/chat/completions
+  storage:
+    id-card-directory: ${ID_DOCUMENT_STORAGE_DIR:./uploads/id-cards}
+    property-media-directory: ${PROPERTY_MEDIA_STORAGE_DIR:./uploads/property-media}
+    public-base-url: ${PUBLIC_API_URL:http://localhost:8080}

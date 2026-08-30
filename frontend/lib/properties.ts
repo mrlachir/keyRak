@@ -10,6 +10,7 @@ import type {
   Property,
   PropertyMedia,
   PropertySearchFilters,
+  Review,
   Tag,
 } from "@/types";
 
@@ -117,5 +118,19 @@ export async function getBlockedDates(propertyId: string): Promise<{
     return { blockedDates: response.blockedDates, availabilityReady: true };
   } catch {
     return { blockedDates: [], availabilityReady: false };
+  }
+}
+
+export async function getPropertyReviews(propertyId: string): Promise<{
+  reviews: Review[];
+  available: boolean;
+}> {
+  try {
+    const reviews = await apiFetch<Review[]>(`/api/properties/${encodeURIComponent(propertyId)}/reviews`, {
+      authenticated: false,
+    });
+    return { reviews, available: true };
+  } catch {
+    return { reviews: [], available: false };
   }
 }

@@ -10,7 +10,8 @@ RUN mvn -B -q -DskipTests package && \
 
 FROM eclipse-temurin:17-jre-alpine AS runtime
 
-RUN addgroup -S keyrak && adduser -S keyrak -G keyrak
+RUN addgroup -S keyrak && adduser -S keyrak -G keyrak && \
+    mkdir -p /app/uploads/id-cards /app/uploads/property-media && chown -R keyrak:keyrak /app
 WORKDIR /app
 COPY --from=build --chown=keyrak:keyrak /workspace/application.jar /app/application.jar
 

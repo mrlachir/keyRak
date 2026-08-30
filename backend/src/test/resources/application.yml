@@ -25,3 +25,7 @@ app:
       api-key: test-groq-key
       model: openai/gpt-oss-20b
       endpoint: https://example.test/openai/v1/chat/completions
+  storage:
+    id-card-directory: ${java.io.tmpdir}/keyrak-test-id-cards
+    property-media-directory: ${java.io.tmpdir}/keyrak-test-property-media
+    public-base-url: http://localhost:8080

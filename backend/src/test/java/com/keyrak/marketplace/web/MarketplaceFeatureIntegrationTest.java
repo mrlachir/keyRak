@@ -19,6 +19,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -26,6 +27,7 @@ import java.time.LocalDate;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -137,29 +139,50 @@ class MarketplaceFeatureIntegrationTest {
                 .build());
         LocalDate checkIn = LocalDate.now().plusDays(14);
 
-        mockMvc.perform(post("/api/bookings")
+        MockMultipartFile bookingPart = new MockMultipartFile(
+                "booking",
+                "booking.json",
+                MediaType.APPLICATION_JSON_VALUE,
+                """
+                        {
+                          "propertyId": "%s",
+                          "checkInDate": "%s",
+                          "checkOutDate": "%s",
+                          "adults": 2,
+                          "children": 1,
+                          "paymentMethod": "CREDIT_CARD",
+                          "specialRequests": "Airport transfer"
+                        }
+                        """.formatted(property.getId(), checkIn, checkIn.plusDays(3)).getBytes()
+        );
+        MockMultipartFile idCard = new MockMultipartFile(
+                "idCard",
+                "identity.pdf",
+                MediaType.APPLICATION_PDF_VALUE,
+                "test government id".getBytes()
+        );
+
+        mockMvc.perform(multipart("/api/bookings")
+                        .file(bookingPart)
+                        .file(idCard)
                         .with(jwt().jwt(token -> token
                                 .subject("booking-google-account")
                                 .claim("email", "booking@example.com")
                                 .claim("email_verified", true)
                                 .claim("name", "Booking Guest")
-                                .claim("roles", java.util.List.of("CLIENT"))))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "propertyId": "%s",
-                                  "checkInDate": "%s",
-                                  "checkOutDate": "%s",
-                                  "adults": 2,
-                                  "children": 1,
-                                  "specialRequests": "Airport transfer"
-                                }
-                                """.formatted(property.getId(), checkIn, checkIn.plusDays(3))))
+                                .claim("roles", java.util.List.of("CLIENT")))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("PENDING"))
                 .andExpect(jsonPath("$.totalPrice").value(4500.00))
                 .andExpect(jsonPath("$.adults").value(2))
-                .andExpect(jsonPath("$.children").value(1));
+                .andExpect(jsonPath("$.children").value(1))
+                .andExpect(jsonPath("$.paymentMethod").value("CREDIT_CARD"))
+                .andExpect(jsonPath("$.idCardUrl").doesNotExist())
+                .andExpect(jsonPath("$.cancellationRequested").value(false));
+        mockMvc.perform(get("/api/users/me").with(jwt().jwt(token -> token
+                        .subject("booking-google-account").claim("email", "booking@example.com"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.idCardUrl").value(org.hamcrest.Matchers.startsWith("/uploads/id-cards/")));
     }
 
     @Test
@@ -257,6 +280,7 @@ class MarketplaceFeatureIntegrationTest {
                 .googleSubject("review-guest")
                 .email("review-guest@example.com")
                 .displayName("Review Guest")
+                .telephone("+212 633 333 333")
                 .build());
         LocalDate checkIn = LocalDate.now().plusDays(45);
         Booking confirmed = bookingRepository.saveAndFlush(Booking.builder()
@@ -298,7 +322,8 @@ class MarketplaceFeatureIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].id").value(pending.getId().toString()))
-                .andExpect(jsonPath("$[0].guestEmail").value("review-guest@example.com"));
+                .andExpect(jsonPath("$[0].guestEmail").value("review-guest@example.com"))
+                .andExpect(jsonPath("$[0].guestTelephone").value("+212 633 333 333"));
 
         mockMvc.perform(patch("/api/admin/bookings/{bookingId}/status", pending.getId())
                         .with(admin)
@@ -313,6 +338,77 @@ class MarketplaceFeatureIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.blockedDates").isArray())
                 .andExpect(jsonPath("$.blockedDates[2]").value(pending.getCheckInDate().toString()));
+    }
+
+    @Test
+    void confirmedCancellationRequestsCanBeRejectedOrApprovedByAdmin() throws Exception {
+        Property property = propertyRepository.saveAndFlush(createProperty("Cancellation Review Villa"));
+        User guest = userRepository.saveAndFlush(User.builder()
+                .googleSubject("confirmed-cancellation-client")
+                .email("confirmed-cancellation@example.com")
+                .displayName("Confirmed Guest")
+                .telephone("+212 644 444 444")
+                .build());
+        LocalDate checkIn = LocalDate.now().plusDays(50);
+        Booking booking = bookingRepository.saveAndFlush(Booking.builder()
+                .user(guest)
+                .property(property)
+                .checkInDate(checkIn)
+                .checkOutDate(checkIn.plusDays(3))
+                .adults(2)
+                .children(0)
+                .totalPrice(new BigDecimal("4500.00"))
+                .status(BookingStatus.CONFIRMED)
+                .build());
+
+        var client = jwt().jwt(token -> token
+                .subject("confirmed-cancellation-client")
+                .claim("email", "confirmed-cancellation@example.com")
+                .claim("email_verified", true)
+                .claim("name", "Confirmed Guest")
+                .claim("roles", java.util.List.of("CLIENT")));
+        var admin = jwt().jwt(token -> token
+                        .subject("admin-google-account")
+                        .claim("email", "admin@example.com")
+                        .claim("email_verified", true)
+                        .claim("name", "KEYRAK Admin")
+                        .claim("roles", java.util.List.of("ADMIN")))
+                .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"));
+
+        mockMvc.perform(patch("/api/bookings/{bookingId}/request-cancel", booking.getId()).with(client))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CONFIRMED"))
+                .andExpect(jsonPath("$.cancellationRequested").value(true));
+
+        mockMvc.perform(get("/api/admin/bookings").with(admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].guestTelephone").value("+212 644 444 444"))
+                .andExpect(jsonPath("$[0].cancellationRequested").value(true));
+
+        mockMvc.perform(patch("/api/admin/bookings/{bookingId}/cancellation-request", booking.getId())
+                        .with(admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"approved\": false}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CONFIRMED"))
+                .andExpect(jsonPath("$.cancellationRequested").value(false));
+
+        mockMvc.perform(patch("/api/bookings/{bookingId}/request-cancel", booking.getId()).with(client))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cancellationRequested").value(true));
+
+        mockMvc.perform(patch("/api/admin/bookings/{bookingId}/cancellation-request", booking.getId())
+                        .with(admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"approved\": true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"))
+                .andExpect(jsonPath("$.cancellationRequested").value(false));
+
+        mockMvc.perform(get("/api/properties/{id}/blocked-dates", property.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.blockedDates.length()").value(0));
     }
 
     private Property createProperty(String title) {

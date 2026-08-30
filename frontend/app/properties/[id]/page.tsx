@@ -5,8 +5,10 @@ import { ArrowLeft, Bath, BedDouble, Check, ExternalLink, MapPin, Star, UsersRou
 
 import { BookingSidebar } from "@/components/booking/booking-sidebar";
 import { PropertyMediaViewer } from "@/components/property/property-media-viewer";
+import { PropertyReviews } from "@/components/property/property-reviews";
 import { PropertyStaticMapShell } from "@/components/property/property-static-map-shell";
-import { getBlockedDates, getProperty } from "@/lib/properties";
+import { getOptionalProfile } from "@/lib/management";
+import { getBlockedDates, getProperty, getPropertyReviews } from "@/lib/properties";
 
 export async function generateMetadata({ params }: PageProps<"/properties/[id]">): Promise<Metadata> {
   const { id } = await params;
@@ -41,8 +43,15 @@ export default async function PropertyPage({ params }: PageProps<"/properties/[i
   const { id } = await params;
   const property = await getProperty(id);
   if (!property) notFound();
-  const availability = await getBlockedDates(property.id);
+  const [availability, reviewData, currentProfile] = await Promise.all([
+    getBlockedDates(property.id),
+    getPropertyReviews(property.id),
+    getOptionalProfile(),
+  ]);
   const amenities = property.tags.map((tag) => tag.name);
+  const averageRating = reviewData.reviews.length > 0
+    ? reviewData.reviews.reduce((sum, review) => sum + review.rating, 0) / reviewData.reviews.length
+    : null;
 
   return (
     <div className="bg-sand-100">
@@ -51,14 +60,14 @@ export default async function PropertyPage({ params }: PageProps<"/properties/[i
           <ArrowLeft className="size-4" aria-hidden="true" /> Back to search
         </Link>
 
-        <div className="mt-7 grid gap-10 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-start">
-          <div>
+        <div className="mt-7 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-start">
+          <div className="min-w-0">
             <PropertyMediaViewer media={property.media} title={property.title} />
 
             <section className="mt-8 border-b border-sand-200 pb-8">
               <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
                 <div>
-                  <p className="eyebrow">{property.propertyType.toLowerCase()} · Locally reviewed</p>
+                  <p className="eyebrow">{property.propertyType.toLowerCase()} · KEYRAK stays</p>
                   <h1 className="mt-2 font-serif text-5xl font-semibold leading-none text-ink sm:text-6xl">{property.title}</h1>
                   <p className="mt-4 flex items-center gap-2 text-sm font-medium text-sand-700">
                     <MapPin className="size-4 text-terracotta-600" aria-hidden="true" /> {property.address}, {property.city}
@@ -66,7 +75,7 @@ export default async function PropertyPage({ params }: PageProps<"/properties/[i
                 </div>
                 <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-sand-200 bg-sand-50 px-4 py-2 text-sm font-bold text-ink">
                   <Star className="size-4 fill-terracotta-400 text-terracotta-400" aria-hidden="true" />
-                  4.9 · Locally reviewed
+                  {!reviewData.available ? "Reviews unavailable" : averageRating === null ? "New · No reviews yet" : `${averageRating.toFixed(1)} · ${reviewData.reviews.length} verified review${reviewData.reviews.length === 1 ? "" : "s"}`}
                 </span>
               </div>
               <div className="mt-7 flex flex-wrap gap-3 text-sm font-semibold text-sand-800">
@@ -127,9 +136,17 @@ export default async function PropertyPage({ params }: PageProps<"/properties/[i
                 <p className="mt-5 text-sm text-sand-700">The host is still adding this home’s amenities.</p>
               )}
             </section>
+
+            <PropertyReviews
+              propertyId={property.id}
+              initialReviews={reviewData.reviews}
+              currentUserId={currentProfile?.id}
+              isAdmin={currentProfile?.role === "ADMIN"}
+              available={reviewData.available}
+            />
           </div>
 
-          <div className="lg:sticky lg:top-28">
+          <div className="min-w-0 lg:sticky lg:top-28">
             <BookingSidebar
               propertyId={property.id}
               propertyTitle={property.title}
@@ -137,6 +154,7 @@ export default async function PropertyPage({ params }: PageProps<"/properties/[i
               maxGuests={property.maxGuests}
               blockedDates={availability.blockedDates}
               availabilityReady={availability.availabilityReady}
+              hasSavedIdCard={Boolean(currentProfile?.idCardUrl)}
             />
           </div>
         </div>

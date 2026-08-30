@@ -19,6 +19,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
@@ -29,6 +30,7 @@ import java.util.UUID;
 import static jakarta.persistence.CascadeType.ALL;
 
 @Entity
+@DynamicUpdate
 @Table(
         name = "users",
         indexes = @Index(name = "idx_users_google_subject", columnList = "google_subject", unique = true)
@@ -58,6 +60,11 @@ public class User {
     @Column(length = 32)
     private String telephone;
 
+    @JsonIgnore
+    @ToString.Exclude
+    @Column(name = "id_card_url", length = 500)
+    private String idCardUrl;
+
     @Column(name = "avatar_url", length = 2048)
     private String avatarUrl;
 
@@ -71,6 +78,12 @@ public class User {
     @Builder.Default
     @OneToMany(mappedBy = "user", cascade = ALL, orphanRemoval = true)
     private List<Booking> bookings = new ArrayList<>();
+
+    @JsonIgnore
+    @ToString.Exclude
+    @Builder.Default
+    @OneToMany(mappedBy = "user", cascade = ALL, orphanRemoval = true)
+    private List<Review> reviews = new ArrayList<>();
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

@@ -3,6 +3,7 @@ package com.keyrak.marketplace.web.dto;
 import com.keyrak.marketplace.domain.entity.Booking;
 import com.keyrak.marketplace.domain.entity.PropertyMedia;
 import com.keyrak.marketplace.domain.enumeration.BookingStatus;
+import com.keyrak.marketplace.domain.enumeration.PaymentMethod;
 import com.keyrak.marketplace.domain.enumeration.PropertyMediaType;
 
 import java.math.BigDecimal;
@@ -23,6 +24,8 @@ public record TripResponse(
         int children,
         BigDecimal totalPrice,
         BookingStatus status,
+        PaymentMethod paymentMethod,
+        Boolean cancellationRequested,
         Instant createdAt
 ) {
     public static TripResponse from(Booking booking) {
@@ -43,6 +46,8 @@ public record TripResponse(
                 booking.getChildren(),
                 booking.getTotalPrice(),
                 booking.getStatus(),
+                booking.getPaymentMethod(),
+                Boolean.TRUE.equals(booking.getCancellationRequested()),
                 booking.getCreatedAt()
         );
     }

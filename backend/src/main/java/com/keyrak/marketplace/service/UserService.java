@@ -8,6 +8,9 @@ import com.keyrak.marketplace.web.dto.UpdateUserProfileRequest;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Locale;
 import java.util.Optional;
@@ -16,9 +19,11 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final BookingDocumentStorageService documentStorageService;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, BookingDocumentStorageService documentStorageService) {
         this.userRepository = userRepository;
+        this.documentStorageService = documentStorageService;
     }
 
     @Transactional
@@ -73,6 +78,27 @@ public class UserService {
                 && !user.getDisplayName().isBlank()
                 && user.getTelephone() != null
                 && !user.getTelephone().isBlank();
+    }
+
+    public boolean hasIdCard(User user) {
+        return user.getIdCardUrl() != null && !user.getIdCardUrl().isBlank();
+    }
+
+    @Transactional
+    public User updateIdCard(String googleSubject, MultipartFile file) {
+        User user = userRepository.findByGoogleSubjectForUpdate(googleSubject)
+                .orElseThrow(() -> new InvalidGoogleIdentityException("Authenticated user was not synchronized"));
+        String previousUrl = user.getIdCardUrl();
+        String newUrl = documentStorageService.store(file);
+        // Booking uploads join this transaction: retain the old file until the whole transaction commits.
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                documentStorageService.deleteQuietly(status == STATUS_COMMITTED ? previousUrl : newUrl);
+            }
+        });
+        user.setIdCardUrl(newUrl);
+        return userRepository.saveAndFlush(user);
     }
 
     private String normalizeEmail(String email) {

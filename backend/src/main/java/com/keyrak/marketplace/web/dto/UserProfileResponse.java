@@ -10,6 +10,7 @@ public record UserProfileResponse(
         String email,
         String displayName,
         String telephone,
+        String idCardUrl,
         String avatarUrl,
         UserRole role
 ) {
@@ -19,6 +20,7 @@ public record UserProfileResponse(
                 user.getEmail(),
                 user.getDisplayName(),
                 user.getTelephone(),
+                user.getIdCardUrl(),
                 user.getAvatarUrl(),
                 user.getRole()
         );

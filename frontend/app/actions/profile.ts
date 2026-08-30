@@ -9,6 +9,26 @@ import type { ActionResult, UpdateUserProfileRequest, UserProfileResponse } from
 
 const telephonePattern = /^[+0-9() .-]{7,32}$/;
 
+export async function uploadProfileIdAction(formData: FormData): Promise<ActionResult<UserProfileResponse>> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return { ok: false, message: "Sign in with Google to update your ID document." };
+  const file = formData.get("idCard");
+  if (!(file instanceof File) || file.size === 0) return { ok: false, message: "Choose a government ID image or PDF." };
+  if (file.size > 8 * 1024 * 1024) return { ok: false, message: "The government ID file must be 8 MB or smaller." };
+  if (!(file.type.startsWith("image/") || file.type === "application/pdf")) {
+    return { ok: false, message: "Government ID must be an image or PDF file." };
+  }
+  try {
+    const body = new FormData();
+    body.set("idCard", file, file.name);
+    const profile = await apiFetch<UserProfileResponse>("/api/users/me/id-card", { method: "PUT", body });
+    revalidatePath("/", "layout");
+    return { ok: true, data: profile };
+  } catch (error) {
+    return { ok: false, message: apiErrorMessage(error, "Your ID document could not be saved.") };
+  }
+}
+
 export async function updateProfileAction(
   input: UpdateUserProfileRequest,
 ): Promise<ActionResult<UserProfileResponse>> {

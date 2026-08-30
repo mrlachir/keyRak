@@ -10,6 +10,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -47,6 +48,11 @@ public class ApiExceptionHandler {
         HttpStatus status = HttpStatus.valueOf(exception.getStatusCode().value());
         String message = exception.getReason() == null ? status.getReasonPhrase() : exception.getReason();
         return response(status, message, Map.of());
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    ResponseEntity<Map<String, Object>> handleUploadTooLarge(MaxUploadSizeExceededException exception) {
+        return response(HttpStatus.PAYLOAD_TOO_LARGE, "The media upload exceeds the allowed request size", Map.of());
     }
 
     private ResponseEntity<Map<String, Object>> response(

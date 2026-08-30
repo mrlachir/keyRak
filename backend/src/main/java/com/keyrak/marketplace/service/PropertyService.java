@@ -5,6 +5,7 @@ import com.keyrak.marketplace.domain.entity.Property;
 import com.keyrak.marketplace.domain.entity.PropertyMedia;
 import com.keyrak.marketplace.domain.entity.Tag;
 import com.keyrak.marketplace.domain.enumeration.BookingStatus;
+import com.keyrak.marketplace.domain.enumeration.PropertyMediaType;
 import com.keyrak.marketplace.repository.PropertyRepository;
 import com.keyrak.marketplace.repository.TagRepository;
 import com.keyrak.marketplace.web.dto.CreatePropertyRequest;
@@ -20,15 +21,18 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.net.URI;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -37,10 +41,16 @@ public class PropertyService {
 
     private final PropertyRepository propertyRepository;
     private final TagRepository tagRepository;
+    private final FileStorageService fileStorageService;
 
-    public PropertyService(PropertyRepository propertyRepository, TagRepository tagRepository) {
+    public PropertyService(
+            PropertyRepository propertyRepository,
+            TagRepository tagRepository,
+            FileStorageService fileStorageService
+    ) {
         this.propertyRepository = propertyRepository;
         this.tagRepository = tagRepository;
+        this.fileStorageService = fileStorageService;
     }
 
     @Transactional(readOnly = true)
@@ -188,7 +198,39 @@ public class PropertyService {
     }
 
     @Transactional
-    public PropertyResponse create(CreatePropertyRequest request) {
+    public PropertyResponse create(
+            CreatePropertyRequest request,
+            List<MultipartFile> imageFiles,
+            List<MultipartFile> panoramaFiles,
+            List<MultipartFile> videoFiles
+    ) {
+        List<MultipartFile> images = nonEmptyFiles(imageFiles);
+        List<MultipartFile> panoramas = nonEmptyFiles(panoramaFiles);
+        List<MultipartFile> videos = nonEmptyFiles(videoFiles);
+        List<CreatePropertyRequest.MediaInput> linkedMedia = request.media() == null
+                ? List.of()
+                : request.media();
+        boolean hasLinkedImage = linkedMedia.stream()
+                .anyMatch(input -> input.type() == PropertyMediaType.IMAGE);
+        if (images.isEmpty() && !hasLinkedImage) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "At least one standard property image is required");
+        }
+        long linkedImages = linkedMedia.stream().filter(input -> input.type() == PropertyMediaType.IMAGE).count();
+        if (images.size() + linkedImages > 20) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A property can contain up to 20 standard images");
+        }
+        for (CreatePropertyRequest.MediaInput media : linkedMedia) validateMediaUrl(media.url());
+        if (panoramas.size() + linkedMedia.stream().filter(media -> media.type() == PropertyMediaType.IMAGE_360).count() > 10
+                || videos.size() + linkedMedia.stream().filter(media -> media.type() == PropertyMediaType.VIDEO).count() > 10) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A property can contain up to 10 panoramas and 10 videos");
+        }
+        long totalUploadSize = images.stream().mapToLong(MultipartFile::getSize).sum()
+                + panoramas.stream().mapToLong(MultipartFile::getSize).sum()
+                + videos.stream().mapToLong(MultipartFile::getSize).sum();
+        if (totalUploadSize > 150L * 1024L * 1024L) {
+            throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "The combined media upload must be 150 MB or smaller");
+        }
+
         Property property = Property.builder()
                 .title(request.title().trim())
                 .description(request.description().trim())
@@ -212,7 +254,7 @@ public class PropertyService {
             property.addTag(tag);
         }
 
-        for (CreatePropertyRequest.MediaInput input : request.media()) {
+        for (CreatePropertyRequest.MediaInput input : linkedMedia) {
             property.addMedia(PropertyMedia.builder()
                     .url(input.url().trim())
                     .type(input.type())
@@ -220,7 +262,70 @@ public class PropertyService {
                     .build());
         }
 
-        return PropertyResponse.from(propertyRepository.saveAndFlush(property));
+        List<String> storedUrls = new ArrayList<>();
+        try {
+            int displayOrder = linkedMedia.stream()
+                    .map(CreatePropertyRequest.MediaInput::displayOrder)
+                    .filter(Objects::nonNull)
+                    .max(Integer::compareTo)
+                    .orElse(-1) + 1;
+            for (MultipartFile image : images) {
+                String url = fileStorageService.store(
+                        image,
+                        PropertyMediaType.IMAGE
+                );
+                storedUrls.add(url);
+                property.addMedia(PropertyMedia.builder()
+                        .url(url)
+                        .type(PropertyMediaType.IMAGE)
+                        .displayOrder(displayOrder++)
+                        .build());
+            }
+            for (MultipartFile panoramaFile : panoramas) {
+                String url = fileStorageService.store(
+                        panoramaFile,
+                        PropertyMediaType.IMAGE_360
+                );
+                storedUrls.add(url);
+                property.addMedia(PropertyMedia.builder()
+                        .url(url)
+                        .type(PropertyMediaType.IMAGE_360)
+                        .displayOrder(displayOrder++)
+                        .build());
+            }
+            for (MultipartFile videoFile : videos) {
+                String url = fileStorageService.store(
+                        videoFile,
+                        PropertyMediaType.VIDEO
+                );
+                storedUrls.add(url);
+                property.addMedia(PropertyMedia.builder()
+                        .url(url)
+                        .type(PropertyMediaType.VIDEO)
+                        .displayOrder(displayOrder++)
+                        .build());
+            }
+
+            return PropertyResponse.from(propertyRepository.saveAndFlush(property));
+        } catch (RuntimeException exception) {
+            storedUrls.forEach(fileStorageService::deleteQuietly);
+            throw exception;
+        }
+    }
+
+    private List<MultipartFile> nonEmptyFiles(List<MultipartFile> files) {
+        return files == null ? List.of() : files.stream().filter(file -> file != null && !file.isEmpty()).toList();
+    }
+
+    private void validateMediaUrl(String value) {
+        try {
+            URI uri = URI.create(value.trim());
+            if (("https".equalsIgnoreCase(uri.getScheme()) || "http".equalsIgnoreCase(uri.getScheme()))
+                    && uri.getHost() != null && uri.getUserInfo() == null) return;
+        } catch (IllegalArgumentException ignored) {
+            // Return one consistent validation response for malformed or unsafe links.
+        }
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Media links must be absolute HTTP or HTTPS URLs without credentials");
     }
 
     private List<String> normalizeTags(List<String> tags) {

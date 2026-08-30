@@ -2,6 +2,7 @@ package com.keyrak.marketplace.domain.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.keyrak.marketplace.domain.enumeration.BookingStatus;
+import com.keyrak.marketplace.domain.enumeration.PaymentMethod;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -84,6 +85,14 @@ public class Booking {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private BookingStatus status = BookingStatus.PENDING;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method", length = 32)
+    private PaymentMethod paymentMethod;
+
+    @Builder.Default
+    @Column(name = "cancellation_requested", nullable = false, columnDefinition = "boolean default false")
+    private Boolean cancellationRequested = false;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

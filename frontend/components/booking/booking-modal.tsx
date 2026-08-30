@@ -1,13 +1,14 @@
 "use client";
 
 import { DayPicker, type DateRange } from "@daypicker/react";
-import { LoaderCircle, Minus, Plus, UsersRound, X } from "lucide-react";
+import { Banknote, CircleCheck, CreditCard, FileCheck2, LoaderCircle, Minus, Plus, ShieldCheck, Upload, UsersRound, X } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { createBookingAction } from "@/app/actions/booking";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/utils";
+import type { PaymentMethod } from "@/types";
 
 function parseDate(value: string): Date {
   return new Date(`${value}T12:00:00`);
@@ -33,6 +34,27 @@ function includesBlockedDate(range: DateRange | undefined, blocked: Set<string>)
     if (blocked.has(dateKey(date))) return true;
   }
   return false;
+}
+
+function formatTestCardNumber(value: string): string {
+  return value.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
+}
+
+function formatExpiry(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 4);
+  return digits.length > 2 ? `${digits.slice(0, 2)} / ${digits.slice(2)}` : digits;
+}
+
+function isValidFutureExpiry(value: string): boolean {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length !== 4) return false;
+
+  const month = Number(digits.slice(0, 2));
+  const year = 2_000 + Number(digits.slice(2));
+  if (month < 1 || month > 12) return false;
+
+  const today = new Date();
+  return year > today.getFullYear() || (year === today.getFullYear() && month >= today.getMonth() + 1);
 }
 
 function GuestCounter({
@@ -87,6 +109,7 @@ export function BookingModal({
   pricePerNight,
   maxGuests,
   blockedDates,
+  hasSavedIdCard = false,
   onClose,
   onSuccess,
 }: {
@@ -95,6 +118,7 @@ export function BookingModal({
   pricePerNight: number;
   maxGuests: number;
   blockedDates: string[];
+  hasSavedIdCard?: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }) {
@@ -106,6 +130,11 @@ export function BookingModal({
   const [range, setRange] = useState<DateRange>();
   const [adults, setAdults] = useState(1);
   const [children, setChildren] = useState(0);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH_ON_ARRIVAL");
+  const [cardNumber, setCardNumber] = useState("4242 4242 4242 4242");
+  const [cardExpiry, setCardExpiry] = useState("12 / 30");
+  const [cardCvc, setCardCvc] = useState("123");
+  const [idCard, setIdCard] = useState<File | null>(null);
   const [specialRequests, setSpecialRequests] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -113,6 +142,10 @@ export function BookingModal({
   const total = nights * pricePerNight;
   const guestTotal = adults + children;
   const validRange = nights > 0 && !includesBlockedDate(range, blockedKeys);
+  const cardDetailsAreValid =
+    cardNumber.replace(/\D/g, "") === "4242424242424242" &&
+    isValidFutureExpiry(cardExpiry) &&
+    /^\d{3}$/.test(cardCvc);
 
   useEffect(() => {
     closeButton.current?.focus();
@@ -129,6 +162,7 @@ export function BookingModal({
   }, [onClose]);
 
   const submit = () => {
+    if (isPending) return;
     setError(null);
     if (!range?.from || !range.to || !validRange) {
       const message = "Choose an available check-in and check-out date.";
@@ -142,16 +176,42 @@ export function BookingModal({
       toast.error(message);
       return;
     }
+    if (paymentMethod === "CREDIT_CARD" && !cardDetailsAreValid) {
+      const message = "Use the KEYRAK test card 4242 4242 4242 4242 with a valid future expiry and 3-digit CVC.";
+      setError(message);
+      toast.error("Test card details are incomplete", { description: message });
+      return;
+    }
+    if (!idCard && !hasSavedIdCard) {
+      const message = "Upload a government ID image or PDF.";
+      setError(message);
+      toast.error(message);
+      return;
+    }
+    if (idCard && idCard.size > 8 * 1024 * 1024) {
+      const message = "The government ID file must be 8 MB or smaller.";
+      setError(message);
+      toast.error(message);
+      return;
+    }
+    if (idCard && !(idCard.type === "application/pdf" || idCard.type.startsWith("image/"))) {
+      const message = "Government ID must be an image or PDF file.";
+      setError(message);
+      toast.error(message);
+      return;
+    }
 
     startTransition(async () => {
-      const result = await createBookingAction({
-        propertyId,
-        checkInDate: dateKey(range.from!),
-        checkOutDate: dateKey(range.to!),
-        adults,
-        children,
-        specialRequests: specialRequests.trim() || undefined,
-      });
+      const formData = new FormData();
+      formData.set("propertyId", propertyId);
+      formData.set("checkInDate", dateKey(range.from!));
+      formData.set("checkOutDate", dateKey(range.to!));
+      formData.set("adults", String(adults));
+      formData.set("children", String(children));
+      formData.set("paymentMethod", paymentMethod);
+      formData.set("specialRequests", specialRequests.trim());
+      if (idCard) formData.set("idCard", idCard);
+      const result = await createBookingAction(formData);
       if (!result.ok) {
         setError(result.message);
         toast.error(result.message);
@@ -242,6 +302,138 @@ export function BookingModal({
               </div>
             </div>
 
+            <fieldset>
+              <legend className="text-sm font-bold text-ink">Payment method</legend>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <label className={`cursor-pointer rounded-2xl border p-3 transition ${paymentMethod === "CREDIT_CARD" ? "border-majorelle-400 bg-majorelle-50 ring-2 ring-majorelle-100" : "border-sand-200 bg-white hover:border-sand-300"}`}>
+                  <span className="flex items-start gap-3">
+                    <input
+                      type="radio"
+                      name="payment-method"
+                      value="CREDIT_CARD"
+                      checked={paymentMethod === "CREDIT_CARD"}
+                      onChange={() => {
+                        setPaymentMethod("CREDIT_CARD");
+                        setError(null);
+                      }}
+                      className="mt-1 size-4 border-sand-300 text-majorelle-600 focus:ring-majorelle-400"
+                    />
+                    <span>
+                      <span className="flex items-center gap-2 text-sm font-bold text-ink"><CreditCard className="size-4 text-majorelle-600" aria-hidden="true" /> Test credit card</span>
+                      <span className="mt-1 block text-xs leading-5 text-sand-600">Demo checkout—no real charge.</span>
+                    </span>
+                  </span>
+                </label>
+                <label className={`cursor-pointer rounded-2xl border p-3 transition ${paymentMethod === "CASH_ON_ARRIVAL" ? "border-olive-400 bg-olive-50 ring-2 ring-olive-100" : "border-sand-200 bg-white hover:border-sand-300"}`}>
+                  <span className="flex items-start gap-3">
+                    <input
+                      type="radio"
+                      name="payment-method"
+                      value="CASH_ON_ARRIVAL"
+                      checked={paymentMethod === "CASH_ON_ARRIVAL"}
+                      onChange={() => {
+                        setPaymentMethod("CASH_ON_ARRIVAL");
+                        setError(null);
+                      }}
+                      className="mt-1 size-4 border-sand-300 text-olive-600 focus:ring-olive-400"
+                    />
+                    <span>
+                      <span className="flex items-center gap-2 text-sm font-bold text-ink"><Banknote className="size-4 text-olive-700" aria-hidden="true" /> Pay on arrival</span>
+                      <span className="mt-1 block text-xs leading-5 text-sand-600">Settle with the host at check-in.</span>
+                    </span>
+                  </span>
+                </label>
+              </div>
+
+              {paymentMethod === "CREDIT_CARD" && (
+                <div className="mt-3 rounded-2xl border border-majorelle-100 bg-majorelle-50/60 p-4" aria-label="Test credit card form">
+                  <div className="mb-4 flex items-start gap-2 rounded-xl border border-majorelle-100 bg-white/70 px-3 py-2.5 text-xs leading-5 text-majorelle-800">
+                    <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                    <span><strong>Safe demo payment.</strong> Use the test details below. No charge is made and card details never leave this browser.</span>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="text-xs font-bold uppercase tracking-[0.1em] text-sand-700 sm:col-span-2">
+                      Card number
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="off"
+                        value={cardNumber}
+                        onChange={(event) => {
+                          setCardNumber(formatTestCardNumber(event.target.value));
+                          setError(null);
+                        }}
+                        maxLength={19}
+                        aria-invalid={cardNumber.replace(/\D/g, "") !== "4242424242424242"}
+                        className="mt-2 min-h-11 w-full rounded-xl border border-sand-300 bg-white px-3 text-sm font-semibold tracking-[0.08em] text-ink outline-none transition focus:border-majorelle-400 focus:ring-2 focus:ring-majorelle-100"
+                      />
+                    </label>
+                    <label className="text-xs font-bold uppercase tracking-[0.1em] text-sand-700">
+                      Expiry
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="off"
+                        placeholder="MM / YY"
+                        value={cardExpiry}
+                        onChange={(event) => {
+                          setCardExpiry(formatExpiry(event.target.value));
+                          setError(null);
+                        }}
+                        maxLength={7}
+                        aria-invalid={!isValidFutureExpiry(cardExpiry)}
+                        className="mt-2 min-h-11 w-full rounded-xl border border-sand-300 bg-white px-3 text-sm font-semibold text-ink outline-none transition placeholder:text-sand-400 focus:border-majorelle-400 focus:ring-2 focus:ring-majorelle-100"
+                      />
+                    </label>
+                    <label className="text-xs font-bold uppercase tracking-[0.1em] text-sand-700">
+                      CVC
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="off"
+                        value={cardCvc}
+                        onChange={(event) => {
+                          setCardCvc(event.target.value.replace(/\D/g, "").slice(0, 3));
+                          setError(null);
+                        }}
+                        maxLength={3}
+                        aria-invalid={!/^\d{3}$/.test(cardCvc)}
+                        className="mt-2 min-h-11 w-full rounded-xl border border-sand-300 bg-white px-3 text-sm font-semibold text-ink outline-none transition focus:border-majorelle-400 focus:ring-2 focus:ring-majorelle-100"
+                      />
+                    </label>
+                  </div>
+                  <p className={`mt-3 flex items-center gap-1.5 text-xs font-semibold ${cardDetailsAreValid ? "text-olive-700" : "text-terracotta-700"}`}>
+                    {cardDetailsAreValid ? <CircleCheck className="size-4" aria-hidden="true" /> : <CreditCard className="size-4" aria-hidden="true" />}
+                    {cardDetailsAreValid ? "Test card verified — ready to submit." : "Enter 4242 4242 4242 4242, a future expiry, and a 3-digit CVC."}
+                  </p>
+                </div>
+              )}
+            </fieldset>
+
+            {hasSavedIdCard && (
+              <p className="flex items-start gap-2 rounded-2xl border border-olive-200 bg-olive-50 p-4 text-sm font-semibold text-olive-800">
+                <FileCheck2 className="mt-0.5 size-5 shrink-0" aria-hidden="true" />ID Card already on file in your profile. No need to upload it again.
+              </p>
+            )}
+            <label className="block text-sm font-bold text-ink">
+              {hasSavedIdCard ? "Replace government ID (optional)" : "Upload Government ID *"}
+              <span className="mt-2 flex min-h-14 cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-terracotta-300 bg-terracotta-50 px-4 py-3 transition hover:border-terracotta-400 hover:bg-terracotta-100">
+                {idCard ? <FileCheck2 className="size-5 shrink-0 text-olive-700" aria-hidden="true" /> : <Upload className="size-5 shrink-0 text-terracotta-600" aria-hidden="true" />}
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-bold text-ink">{idCard ? idCard.name : "Choose an image or PDF"}</span>
+                  <span className="block text-xs font-medium text-sand-600">{hasSavedIdCard ? "Optional replacement" : "Saved to your profile for future trips"} · Maximum 8 MB</span>
+                </span>
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  required={!hasSavedIdCard}
+                  disabled={isPending}
+                  onChange={(event) => setIdCard(event.target.files?.[0] ?? null)}
+                  className="sr-only"
+                />
+              </span>
+            </label>
+
             <label className="block text-sm font-bold text-ink">
               Special requests <span className="font-medium text-sand-600">(optional)</span>
               <textarea
@@ -269,7 +461,7 @@ export function BookingModal({
             <Button
               type="button"
               className="w-full"
-              disabled={isPending || !validRange || guestTotal > maxGuests}
+              disabled={isPending || !validRange || guestTotal > maxGuests || (!idCard && !hasSavedIdCard) || (paymentMethod === "CREDIT_CARD" && !cardDetailsAreValid)}
               onClick={submit}
             >
               {isPending ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : null}

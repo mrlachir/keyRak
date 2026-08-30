@@ -16,6 +16,7 @@ export function BookingSidebar({
   maxGuests,
   blockedDates,
   availabilityReady,
+  hasSavedIdCard = false,
 }: {
   propertyId: string;
   propertyTitle: string;
@@ -23,6 +24,7 @@ export function BookingSidebar({
   maxGuests: number;
   blockedDates: string[];
   availabilityReady: boolean;
+  hasSavedIdCard?: boolean;
 }) {
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -69,6 +71,7 @@ export function BookingSidebar({
           pricePerNight={pricePerNight}
           maxGuests={maxGuests}
           blockedDates={blockedDates}
+          hasSavedIdCard={hasSavedIdCard}
           onClose={() => setModalOpen(false)}
           onSuccess={() => {
             setModalOpen(false);

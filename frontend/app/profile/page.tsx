@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { ProfileBookingList } from "@/components/profile/profile-booking-list";
 import { ProfileEditor } from "@/components/profile/profile-editor";
+import { ProfileIdCard } from "@/components/profile/profile-id-card";
 import { getMyProfile, getMyTrips } from "@/lib/management";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +37,7 @@ export default async function ProfilePage({
         )}
 
         <ProfileEditor profile={profile} />
+        <ProfileIdCard hasIdCard={Boolean(profile.idCardUrl)} />
 
         {trips.length === 0 ? (
           <section className="surface-card mt-10 rounded-[2rem] px-6 py-16 text-center">
