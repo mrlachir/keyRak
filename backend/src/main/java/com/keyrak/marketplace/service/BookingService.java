@@ -140,7 +140,9 @@ public class BookingService {
         return new AdminDashboardResponse(
                 propertyRepository.countByActiveTrue(),
                 bookingRepository.countByStatus(BookingStatus.PENDING),
-                bookingRepository.sumTotalPriceByStatus(BookingStatus.CONFIRMED)
+                bookingRepository.sumTotalPriceByStatus(BookingStatus.CONFIRMED),
+                bookingRepository.sumCompletedPayments(),
+                bookingRepository.sumConfirmedCashOnArrival()
         );
     }
 
@@ -150,6 +152,11 @@ public class BookingService {
                 .stream()
                 .map(AdminBookingResponse::from)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<AdminBookingResponse> getAllAdminBookings() {
+        return bookingRepository.findAllByOrderByCreatedAtDesc().stream().map(AdminBookingResponse::from).toList();
     }
 
     @Transactional

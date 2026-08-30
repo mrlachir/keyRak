@@ -4,6 +4,7 @@ import com.keyrak.marketplace.service.PropertyService;
 import com.keyrak.marketplace.web.dto.CreatePropertyRequest;
 import com.keyrak.marketplace.web.dto.PropertyResponse;
 import com.keyrak.marketplace.web.dto.TagOptionResponse;
+import com.keyrak.marketplace.web.dto.FeaturePropertyRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -16,6 +17,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -38,6 +43,30 @@ public class PropertyController {
     @GetMapping("/{id}")
     public PropertyResponse getProperty(@PathVariable UUID id) {
         return propertyService.get(id);
+    }
+
+    @GetMapping("/featured")
+    public List<PropertyResponse> featuredProperties() { return propertyService.featured(); }
+
+    @PatchMapping("/{id}/featured")
+    @PreAuthorize("hasRole('ADMIN')")
+    public PropertyResponse featureProperty(@PathVariable UUID id, @Valid @RequestBody FeaturePropertyRequest request) {
+        return propertyService.setFeatured(id, request.isFeatured());
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasRole('ADMIN')")
+    public void deleteProperty(@PathVariable UUID id) { propertyService.delete(id); }
+
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    public PropertyResponse updateProperty(@PathVariable UUID id,
+            @Valid @RequestPart("property") CreatePropertyRequest request,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images,
+            @RequestPart(value = "panorama", required = false) List<MultipartFile> panoramas,
+            @RequestPart(value = "video", required = false) List<MultipartFile> videos) {
+        return propertyService.update(id, request, images, panoramas, videos);
     }
 
     @GetMapping("/search")

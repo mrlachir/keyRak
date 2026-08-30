@@ -127,6 +127,7 @@ export function BookingModal({
   const blocked = blockedDates.map(parseDate);
   const blockedKeys = new Set(blockedDates);
   const closeButton = useRef<HTMLButtonElement>(null);
+  const dialog = useRef<HTMLElement>(null);
   const [range, setRange] = useState<DateRange>();
   const [adults, setAdults] = useState(1);
   const [children, setChildren] = useState(0);
@@ -148,16 +149,31 @@ export function BookingModal({
     /^\d{3}$/.test(cardCvc);
 
   useEffect(() => {
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     closeButton.current?.focus();
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
+      if (event.key !== "Tab") return;
+      const focusable = Array.from(dialog.current?.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]',
+      ) ?? []).filter(element => element.getClientRects().length > 0);
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKeyDown);
+      previousFocus?.focus({ preventScroll: true });
     };
   }, [onClose]);
 
@@ -223,16 +239,17 @@ export function BookingModal({
 
   return (
     <div
-      className="fixed inset-0 z-[80] grid place-items-center overflow-y-auto bg-ink/65 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/65 p-3 backdrop-blur-sm sm:p-6"
       onMouseDown={(event) => event.target === event.currentTarget && onClose()}
     >
       <section
+        ref={dialog}
         role="dialog"
         aria-modal="true"
         aria-labelledby="booking-modal-title"
-        className="my-6 w-full max-w-5xl overflow-hidden rounded-[2rem] border border-white/70 bg-sand-50 shadow-float"
+        className="max-h-[calc(100dvh-1.5rem)] w-full max-w-5xl overflow-y-auto overscroll-contain rounded-[2rem] border border-white/70 bg-sand-50 shadow-float sm:max-h-[calc(100dvh-3rem)]"
       >
-        <header className="flex items-start justify-between gap-4 border-b border-sand-200 px-5 py-5 sm:px-7">
+        <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-sand-200 bg-sand-50 px-5 py-5 sm:px-7">
           <div>
             <p className="eyebrow">Booking request</p>
             <h2 id="booking-modal-title" className="mt-1 font-serif text-3xl font-semibold text-ink">

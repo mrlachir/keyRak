@@ -3,19 +3,22 @@
 import dynamic from "next/dynamic";
 import { CheckCircle2, ImagePlus, LoaderCircle, MapPin, Sparkles, WandSparkles } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { FormEvent } from "react";
 import { toast } from "sonner";
 
 import {
   createPropertyAction,
+  updatePropertyAction,
   generatePropertyDescriptionAction,
 } from "@/app/actions/admin";
 import { Button } from "@/components/ui/button";
 import { PropertyMediaInput } from "@/components/admin/property-media-input";
+import { ViewPropertyLink } from "@/components/admin/view-property-link";
 import { mediaGroups, parseMediaLinks, validatePropertyMedia, type MediaFiles } from "@/lib/media-inputs";
 import { cn } from "@/lib/utils";
-import type { CreatePropertyRequest, PropertyMediaType, PropertyType } from "@/types";
+import type { CreatePropertyRequest, Property, PropertyMediaType, PropertyType } from "@/types";
 
 const PropertyLocationMap = dynamic(
   () => import("@/components/admin/property-location-map"),
@@ -77,11 +80,22 @@ function numberValue(value: string): number {
   return Number(value.trim());
 }
 
-export function AdminPropertyForm() {
-  const [form, setForm] = useState<FormState>(initialForm);
-  const [amenities, setAmenities] = useState<string[]>([]);
+export function AdminPropertyForm({ property }: { property?: Property }) {
+  const router = useRouter();
+  const [form, setForm] = useState<FormState>(() => property ? {
+    title: property.title, description: property.description ?? "", propertyType: property.propertyType,
+    address: property.address, city: property.city, pricePerNight: String(property.pricePerNight),
+    latitude: String(property.latitude), longitude: String(property.longitude), maxGuests: String(property.maxGuests),
+    bedrooms: String(property.bedrooms), bathrooms: String(property.bathrooms),
+  } : initialForm);
+  const [active, setActive] = useState(property?.active ?? true);
+  const [amenities, setAmenities] = useState<string[]>(property?.tags.map(tag => tag.name) ?? []);
   const [mediaFiles, setMediaFiles] = useState<MediaFiles>({ IMAGE: [], IMAGE_360: [], VIDEO: [] });
-  const [mediaUrls, setMediaUrls] = useState<Record<PropertyMediaType, string>>({ IMAGE: "", IMAGE_360: "", VIDEO: "" });
+  const [mediaUrls, setMediaUrls] = useState<Record<PropertyMediaType, string>>(() => ({
+    IMAGE: property?.media.filter(media => media.type === "IMAGE").map(media => media.url).join("\n") ?? "",
+    IMAGE_360: property?.media.filter(media => media.type === "IMAGE_360").map(media => media.url).join("\n") ?? "",
+    VIDEO: property?.media.filter(media => media.type === "VIDEO").map(media => media.url).join("\n") ?? "",
+  }));
   const [message, setMessage] = useState<string | null>(null);
   const [createdPropertyId, setCreatedPropertyId] = useState<string | null>(null);
   const [isGenerating, startGenerating] = useTransition();
@@ -190,7 +204,7 @@ export function AdminPropertyForm() {
       maxGuests: numberValue(form.maxGuests),
       bedrooms: numberValue(form.bedrooms),
       bathrooms: numberValue(form.bathrooms),
-      active: true,
+      active,
       tagNames: amenities,
       media: linkedMedia,
     };
@@ -201,24 +215,33 @@ export function AdminPropertyForm() {
       for (const group of mediaGroups) {
         mediaFiles[group.type].forEach(file => formData.append(group.part, file, file.name));
       }
-      const result = await createPropertyAction(formData);
+      const result = property ? await updatePropertyAction(property.id, formData) : await createPropertyAction(formData);
       if (!result.ok) {
         setMessage(result.message);
         toast.error(result.message);
         return;
       }
       setCreatedPropertyId(result.data.id);
-      setMessage("Property published successfully.");
-      toast.success("Property created", {
-        description: `${result.data.title} is now live in the marketplace.`,
+      setMessage(property ? "Property updated successfully." : "Property saved successfully.");
+      toast.success(property ? "Property updated" : "Property created", {
+        description: result.data.active ? `${result.data.title} is live in the marketplace.` : "This property is unpublished and hidden from search.",
+        action: result.data.active ? {
+          label: "View property",
+          onClick: () => router.push(`/properties/${result.data.id}`),
+        } : undefined,
       });
+      router.push("/admin/properties");
+      router.refresh();
     });
   };
 
   return (
     <form onSubmit={submit} className="space-y-8">
       <section className="rounded-3xl border border-sand-200 bg-sand-50 p-5 shadow-card sm:p-7">
-        <p className="eyebrow">Property essentials</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="eyebrow">Property essentials</p>
+          {property && <ViewPropertyLink property={property} />}
+        </div>
         <div className="mt-5 grid gap-5 sm:grid-cols-2">
           <label className="text-sm font-bold text-ink sm:col-span-2">
             Property title
@@ -279,7 +302,7 @@ export function AdminPropertyForm() {
         <fieldset className="mt-6">
           <legend className="text-sm font-bold text-ink">Select only amenities that are present</legend>
           <div className="mt-3 flex flex-wrap gap-2">
-            {amenityOptions.map((amenity) => {
+            {[...new Set([...amenityOptions, ...amenities])].map((amenity) => {
               const selected = amenities.includes(amenity);
               return (
                 <button
@@ -348,16 +371,20 @@ export function AdminPropertyForm() {
             {createdPropertyId ? <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-olive-600" /> : <Sparkles className="mt-0.5 size-5 shrink-0" />}
             <div>
               <p>{message}</p>
-              {createdPropertyId && <Link href={`/properties/${createdPropertyId}`} className="mt-2 inline-flex font-bold text-majorelle-700 underline underline-offset-4">View the published property</Link>}
+              {createdPropertyId && <Link href={active ? `/properties/${createdPropertyId}` : "/admin/properties"} className="mt-2 inline-flex font-bold text-majorelle-700 underline underline-offset-4">{active ? "View the published property" : "Back to property management"}</Link>}
             </div>
           </div>
         </div>
       )}
 
-      <div className="flex justify-end">
+      <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
+        <label className="flex items-start gap-3 text-sm font-bold text-ink">
+          <input type="checkbox" checked={active} onChange={event => setActive(event.target.checked)} disabled={isSaving} className="mt-1 size-4 accent-majorelle-600" />
+          <span>Published<span className="mt-1 block max-w-md text-xs font-medium leading-5 text-sand-700">Unpublishing hides the property from search and featured stays. Existing reservations are preserved.</span></span>
+        </label>
         <Button type="submit" className="min-w-48" disabled={isSaving}>
           {isSaving ? <LoaderCircle className="size-4 animate-spin" /> : null}
-          {isSaving ? "Publishing…" : "Publish property"}
+          {isSaving ? "Saving…" : property ? "Save changes" : "Create property"}
         </Button>
       </div>
     </form>

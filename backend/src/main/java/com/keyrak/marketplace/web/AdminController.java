@@ -1,6 +1,12 @@
 package com.keyrak.marketplace.web;
 
 import com.keyrak.marketplace.service.BookingService;
+import com.keyrak.marketplace.service.PropertyService;
+import com.keyrak.marketplace.repository.UserRepository;
+import com.keyrak.marketplace.web.dto.AdminUserResponse;
+import com.keyrak.marketplace.web.dto.PropertyResponse;
+import org.springframework.data.domain.Sort;
+import org.springframework.web.bind.annotation.RequestParam;
 import com.keyrak.marketplace.web.dto.AdminBookingResponse;
 import com.keyrak.marketplace.web.dto.AdminDashboardResponse;
 import com.keyrak.marketplace.web.dto.CancellationDecisionRequest;
@@ -23,9 +29,13 @@ import java.util.UUID;
 public class AdminController {
 
     private final BookingService bookingService;
+    private final PropertyService propertyService;
+    private final UserRepository userRepository;
 
-    public AdminController(BookingService bookingService) {
+    public AdminController(BookingService bookingService, PropertyService propertyService, UserRepository userRepository) {
         this.bookingService = bookingService;
+        this.propertyService = propertyService;
+        this.userRepository = userRepository;
     }
 
     @GetMapping("/dashboard/metrics")
@@ -34,8 +44,20 @@ public class AdminController {
     }
 
     @GetMapping("/bookings")
-    public List<AdminBookingResponse> getPendingBookings() {
-        return bookingService.getAdminReviewQueue();
+    public List<AdminBookingResponse> getBookings(@RequestParam(defaultValue = "false") boolean all) {
+        return all ? bookingService.getAllAdminBookings() : bookingService.getAdminReviewQueue();
+    }
+
+    @GetMapping("/properties")
+    public List<PropertyResponse> getProperties() { return propertyService.listAdmin(); }
+
+    @GetMapping("/properties/{id}")
+    public PropertyResponse getProperty(@PathVariable UUID id) { return propertyService.getAdmin(id); }
+
+    @GetMapping("/users")
+    public List<AdminUserResponse> getUsers() {
+        return userRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
+                .stream().map(AdminUserResponse::from).toList();
     }
 
     @PatchMapping("/bookings/{bookingId}/status")

@@ -90,6 +90,11 @@ public class Booking {
     @Column(name = "payment_method", length = 32)
     private PaymentMethod paymentMethod;
 
+    // Only a trusted payment reconciliation can set this; choosing a demo card is not payment.
+    @Builder.Default
+    @Column(name = "payment_completed", nullable = false, columnDefinition = "boolean default false")
+    private boolean paymentCompleted = false;
+
     @Builder.Default
     @Column(name = "cancellation_requested", nullable = false, columnDefinition = "boolean default false")
     private Boolean cancellationRequested = false;

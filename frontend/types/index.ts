@@ -57,6 +57,7 @@ export interface Property {
   bedrooms: number;
   bathrooms: number;
   active: boolean;
+  isFeatured: boolean;
   media: PropertyMedia[];
   tags: Tag[];
   createdAt: string;
@@ -84,6 +85,17 @@ export interface AdminDashboardMetrics {
   totalActiveProperties: number;
   pendingBookingRequests: number;
   estimatedRevenue: number;
+  totalRevenue: number;
+  upcomingCash: number;
+}
+
+export interface AdminUser {
+  id: UUID;
+  displayName?: string | null;
+  email: string;
+  telephone?: string | null;
+  role: UserRole;
+  createdAt: string;
 }
 
 export interface AdminBooking {
@@ -103,6 +115,7 @@ export interface AdminBooking {
   status: BookingStatus;
   paymentMethod?: PaymentMethod | null;
   guestHasIdCard: boolean;
+  paymentCompleted: boolean;
   cancellationRequested: boolean;
   createdAt: string;
   updatedAt: string;

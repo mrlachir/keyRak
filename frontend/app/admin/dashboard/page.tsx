@@ -30,11 +30,18 @@ export default async function AdminDashboardPage() {
       tone: "bg-majorelle-100 text-majorelle-700",
     },
     {
-      label: "Estimated revenue",
-      value: formatPrice(Number(metrics.estimatedRevenue)),
-      detail: "Confirmed booking value",
+      label: "Total revenue",
+      value: formatPrice(Number(metrics.totalRevenue)),
+      detail: "Payments recorded as completed",
       icon: Banknote,
       tone: "bg-olive-100 text-olive-700",
+    },
+    {
+      label: "Upcoming cash",
+      value: formatPrice(Number(metrics.upcomingCash)),
+      detail: "Confirmed · Pay on arrival",
+      icon: Banknote,
+      tone: "bg-sand-200 text-sand-800",
     },
   ];
 
@@ -54,7 +61,7 @@ export default async function AdminDashboardPage() {
           </Link>
         </div>
 
-        <div className="mt-10 grid gap-5 md:grid-cols-3">
+        <div className="mt-10 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
           {cards.map(({ label, value, detail, icon: Icon, tone }) => (
             <article key={label} className="surface-card rounded-[2rem] p-6 sm:p-7">
               <span className={`grid size-12 place-items-center rounded-2xl ${tone}`}><Icon className="size-6" aria-hidden="true" /></span>
@@ -64,6 +71,7 @@ export default async function AdminDashboardPage() {
             </article>
           ))}
         </div>
+        <p className="mt-5 rounded-2xl border border-sand-200 bg-sand-50 px-5 py-4 text-xs leading-6 text-sand-700">Revenue counts only completed payment records, not booking approval or the test-card simulation. Existing bookings without a recorded payment remain excluded. Upcoming cash is the total value of confirmed pay-on-arrival bookings.</p>
 
         <Link href="/admin/bookings" className="mt-8 flex items-center justify-between gap-4 rounded-[2rem] border border-majorelle-200 bg-majorelle-50 p-6 text-majorelle-950 shadow-card transition hover:border-majorelle-300 sm:p-7">
           <div>
@@ -72,6 +80,10 @@ export default async function AdminDashboardPage() {
           </div>
           <ChevronRight className="size-6 shrink-0" aria-hidden="true" />
         </Link>
+        <div className="mt-5 grid gap-5 sm:grid-cols-2">
+          <Link href="/admin/properties" className="rounded-3xl border border-sand-200 bg-sand-50 p-6 font-bold text-majorelle-700 hover:bg-white">Manage properties & homepage selections →</Link>
+          <Link href="/admin/users" className="rounded-3xl border border-sand-200 bg-sand-50 p-6 font-bold text-majorelle-700 hover:bg-white">View registered users →</Link>
+        </div>
       </div>
     </div>
   );

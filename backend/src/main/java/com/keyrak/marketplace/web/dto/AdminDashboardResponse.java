@@ -5,6 +5,8 @@ import java.math.BigDecimal;
 public record AdminDashboardResponse(
         long totalActiveProperties,
         long pendingBookingRequests,
-        BigDecimal estimatedRevenue
+        BigDecimal estimatedRevenue,
+        BigDecimal totalRevenue,
+        BigDecimal upcomingCash
 ) {
 }

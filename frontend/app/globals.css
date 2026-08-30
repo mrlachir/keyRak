@@ -38,6 +38,13 @@ select {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Keep Leaflet's panes (z-index 200–1000) inside each map, below app UI. */
+.leaflet-container {
+  position: relative;
+  isolation: isolate;
+  z-index: 0;
+}
+
 @layer components {
   .surface-card {
     @apply border border-white/70 bg-sand-50/90 shadow-card backdrop-blur-sm;

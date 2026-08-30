@@ -20,6 +20,21 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
 
     long countByStatus(BookingStatus status);
 
+    boolean existsByPropertyId(UUID propertyId);
+
+    @Query("select coalesce(sum(b.totalPrice), 0) from Booking b where b.paymentCompleted = true")
+    BigDecimal sumCompletedPayments();
+
+    @Query("""
+            select coalesce(sum(b.totalPrice), 0) from Booking b
+            where b.status = com.keyrak.marketplace.domain.enumeration.BookingStatus.CONFIRMED
+              and b.paymentMethod = com.keyrak.marketplace.domain.enumeration.PaymentMethod.CASH_ON_ARRIVAL
+            """)
+    BigDecimal sumConfirmedCashOnArrival();
+
+    @EntityGraph(attributePaths = {"property", "user"})
+    List<Booking> findAllByOrderByCreatedAtDesc();
+
     @Query("select coalesce(sum(booking.totalPrice), 0) from Booking booking where booking.status = :status")
     BigDecimal sumTotalPriceByStatus(@Param("status") BookingStatus status);
 

@@ -44,6 +44,7 @@ function demoProperty(id: string): Property | null {
     bedrooms: property.bedrooms,
     bathrooms: Math.max(1, property.bedrooms),
     active: true,
+    isFeatured: false,
     media,
     tags: property.tags.map((name, index) => ({ id: index + 1, name })),
     createdAt: fallbackTimestamp,

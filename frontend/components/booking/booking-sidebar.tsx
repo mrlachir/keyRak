@@ -2,6 +2,7 @@
 
 import { Info, TriangleAlert } from "lucide-react";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "sonner";
 
 import { AvailabilityCalendar } from "@/components/booking/availability-calendar";
@@ -64,7 +65,7 @@ export function BookingSidebar({
         </p>
       </aside>
 
-      {modalOpen && (
+      {modalOpen && createPortal(
         <BookingModal
           propertyId={propertyId}
           propertyTitle={propertyTitle}
@@ -79,7 +80,8 @@ export function BookingSidebar({
               description: "Your stay is pending host confirmation.",
             });
           }}
-        />
+        />,
+        document.body,
       )}
     </>
   );

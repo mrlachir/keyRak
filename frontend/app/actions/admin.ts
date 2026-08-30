@@ -111,6 +111,52 @@ export async function generatePropertyDescriptionAction(
 export async function createPropertyAction(
   formData: FormData,
 ): Promise<ActionResult<Property>> {
+  return saveProperty(formData);
+}
+
+export async function updatePropertyAction(id: string, formData: FormData): Promise<ActionResult<Property>> {
+  if (!id) return { ok: false, message: "Choose a property to update." };
+  return saveProperty(formData, id);
+}
+
+function revalidatePropertyPages(id?: string) {
+  revalidatePath("/");
+  revalidatePath("/search");
+  revalidatePath("/admin/dashboard");
+  revalidatePath("/admin/properties");
+  revalidatePath("/admin/bookings");
+  revalidatePath("/profile");
+  if (id) {
+    revalidatePath(`/properties/${id}`);
+    revalidatePath(`/admin/properties/${id}/edit`);
+  }
+}
+
+export async function featurePropertyAction(id: string, isFeatured: boolean): Promise<ActionResult<Property>> {
+  const authorizationError = await verifyAdmin();
+  if (authorizationError) return { ok: false, message: authorizationError };
+  if (!id || typeof isFeatured !== "boolean") return { ok: false, message: "Choose a valid feature setting." };
+  try {
+    const property = await apiFetch<Property>(`/api/properties/${encodeURIComponent(id)}/featured`, {
+      method: "PATCH", body: JSON.stringify({ isFeatured }),
+    });
+    revalidatePropertyPages(id);
+    return { ok: true, data: property };
+  } catch (error) { return { ok: false, message: apiErrorMessage(error, "The featured selection could not be saved.") }; }
+}
+
+export async function deletePropertyAction(id: string): Promise<ActionResult<null>> {
+  const authorizationError = await verifyAdmin();
+  if (authorizationError) return { ok: false, message: authorizationError };
+  if (!id) return { ok: false, message: "Choose a property to delete." };
+  try {
+    await apiFetch<void>(`/api/properties/${encodeURIComponent(id)}`, { method: "DELETE" });
+    revalidatePropertyPages(id);
+    return { ok: true, data: null };
+  } catch (error) { return { ok: false, message: apiErrorMessage(error, "The property could not be deleted.") }; }
+}
+
+async function saveProperty(formData: FormData, id?: string): Promise<ActionResult<Property>> {
   const authorizationError = await verifyAdmin();
   if (authorizationError) return { ok: false, message: authorizationError };
 
@@ -148,12 +194,11 @@ export async function createPropertyAction(
     for (const group of mediaGroups) {
       files[group.type].forEach(file => multipartBody.append(group.part, file, file.name));
     }
-    const property = await apiFetch<Property>("/api/properties", {
-      method: "POST",
+    const property = await apiFetch<Property>(id ? `/api/properties/${encodeURIComponent(id)}` : "/api/properties", {
+      method: id ? "PUT" : "POST",
       body: multipartBody,
     });
-    revalidatePath("/search");
-    revalidatePath("/admin/dashboard");
+    revalidatePropertyPages(property.id);
     return { ok: true, data: property };
   } catch (error) {
     return {

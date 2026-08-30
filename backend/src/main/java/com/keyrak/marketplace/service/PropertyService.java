@@ -7,6 +7,7 @@ import com.keyrak.marketplace.domain.entity.Tag;
 import com.keyrak.marketplace.domain.enumeration.BookingStatus;
 import com.keyrak.marketplace.domain.enumeration.PropertyMediaType;
 import com.keyrak.marketplace.repository.PropertyRepository;
+import com.keyrak.marketplace.repository.BookingRepository;
 import com.keyrak.marketplace.repository.TagRepository;
 import com.keyrak.marketplace.web.dto.CreatePropertyRequest;
 import com.keyrak.marketplace.web.dto.PropertyResponse;
@@ -19,6 +20,7 @@ import jakarta.persistence.criteria.Subquery;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -42,15 +44,66 @@ public class PropertyService {
     private final PropertyRepository propertyRepository;
     private final TagRepository tagRepository;
     private final FileStorageService fileStorageService;
+    private final BookingRepository bookingRepository;
+    private final JdbcTemplate jdbc;
 
     public PropertyService(
             PropertyRepository propertyRepository,
             TagRepository tagRepository,
-            FileStorageService fileStorageService
+            FileStorageService fileStorageService,
+            BookingRepository bookingRepository,
+            JdbcTemplate jdbc
     ) {
         this.propertyRepository = propertyRepository;
         this.tagRepository = tagRepository;
         this.fileStorageService = fileStorageService;
+        this.bookingRepository = bookingRepository;
+        this.jdbc = jdbc;
+    }
+
+    @Transactional(readOnly = true)
+    public List<PropertyResponse> listAdmin() {
+        return propertyRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
+                .stream().map(PropertyResponse::from).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PropertyResponse getAdmin(UUID id) {
+        return PropertyResponse.from(propertyRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Property not found")));
+    }
+
+    @Transactional(readOnly = true)
+    public List<PropertyResponse> featured() {
+        return propertyRepository.findFeatured().stream().limit(3).map(PropertyResponse::from).toList();
+    }
+
+    @Transactional
+    public PropertyResponse setFeatured(UUID id, boolean featured) {
+        // The mutex is database-backed: count + update remain atomic with multiple admin/API sessions.
+        jdbc.queryForObject("SELECT id FROM catalog_locks WHERE id = 1 FOR UPDATE", Integer.class);
+        Property property = propertyRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Property not found"));
+        if (featured && !property.isActive()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Publish this property before featuring it");
+        }
+        if (featured && !property.isFeatured() && propertyRepository.countFeatured() >= 3) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Only 3 properties can be featured. Unfeature one first.");
+        }
+        property.setFeatured(featured);
+        return PropertyResponse.from(propertyRepository.saveAndFlush(property));
+    }
+
+    @Transactional
+    public void delete(UUID id) {
+        Property property = propertyRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Property not found"));
+        if (bookingRepository.existsByPropertyId(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "This property has reservations and cannot be deleted. Unpublish it in the edit form to preserve trip history.");
+        }
+        propertyRepository.delete(property);
+        propertyRepository.flush();
     }
 
     @Transactional(readOnly = true)
@@ -204,6 +257,17 @@ public class PropertyService {
             List<MultipartFile> panoramaFiles,
             List<MultipartFile> videoFiles
     ) {
+        return saveProperty(null, request, imageFiles, panoramaFiles, videoFiles);
+    }
+
+    @Transactional
+    public PropertyResponse update(UUID id, CreatePropertyRequest request, List<MultipartFile> images,
+                                   List<MultipartFile> panoramas, List<MultipartFile> videos) {
+        return saveProperty(id, request, images, panoramas, videos);
+    }
+
+    private PropertyResponse saveProperty(UUID id, CreatePropertyRequest request, List<MultipartFile> imageFiles,
+                                          List<MultipartFile> panoramaFiles, List<MultipartFile> videoFiles) {
         List<MultipartFile> images = nonEmptyFiles(imageFiles);
         List<MultipartFile> panoramas = nonEmptyFiles(panoramaFiles);
         List<MultipartFile> videos = nonEmptyFiles(videoFiles);
@@ -231,20 +295,23 @@ public class PropertyService {
             throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "The combined media upload must be 150 MB or smaller");
         }
 
-        Property property = Property.builder()
-                .title(request.title().trim())
-                .description(request.description().trim())
-                .propertyType(request.propertyType())
-                .address(request.address().trim())
-                .city(request.city().trim())
-                .pricePerNight(request.pricePerNight())
-                .latitude(request.latitude())
-                .longitude(request.longitude())
-                .maxGuests(request.maxGuests())
-                .bedrooms(request.bedrooms())
-                .bathrooms(request.bathrooms())
-                .active(request.active())
-                .build();
+        Property property = id == null ? Property.builder().build() : propertyRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Property not found"));
+        property.setTitle(request.title().trim());
+        property.setDescription(request.description().trim());
+        property.setPropertyType(request.propertyType());
+        property.setAddress(request.address().trim());
+        property.setCity(request.city().trim());
+        property.setPricePerNight(request.pricePerNight());
+        property.setLatitude(request.latitude());
+        property.setLongitude(request.longitude());
+        property.setMaxGuests(request.maxGuests());
+        property.setBedrooms(request.bedrooms());
+        property.setBathrooms(request.bathrooms());
+        property.setActive(request.active());
+        if (!request.active()) property.setFeatured(false);
+        new ArrayList<>(property.getTags()).forEach(property::removeTag);
+        new ArrayList<>(property.getMedia()).forEach(property::removeMedia);
 
         Set<String> tagNames = request.tagNames() == null ? Set.of() : request.tagNames();
         for (String rawName : new LinkedHashSet<>(tagNames)) {

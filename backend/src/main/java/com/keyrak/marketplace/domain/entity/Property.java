@@ -94,6 +94,10 @@ public class Property {
     @Column(nullable = false)
     private boolean active = true;
 
+    @Builder.Default
+    @Column(name = "is_featured", nullable = false, columnDefinition = "boolean default false")
+    private boolean isFeatured = false;
+
     @ToString.Exclude
     @Builder.Default
     @OneToMany(mappedBy = "property", cascade = CascadeType.ALL, orphanRemoval = true)

@@ -91,7 +91,38 @@ Hibernate's existing `ddl-auto=update` creates the review table when the backend
 The reservation review queue has All, Booking Requests, and Cancellation Requests tabs, with live counts.
 The latter two show pending reservations and confirmed reservations requesting cancellation respectively.
 
-Verification:
+## Phase 4: administration and featured stays
+
+- `/admin/properties`: full inventory, publication status, edit/delete controls, and homepage selection.
+- `/admin/properties/{id}/edit`: edit facts and media through the existing multipart studio.
+- `/admin/users`: read-only account directory (names, email, telephone, role; no identity-document paths).
+- `/admin/bookings`: all reservations with full details; Booking Requests and Cancellation Requests tabs
+  retain the moderation workflow. Decisions update the entry in the register instead of erasing its history.
+- `/admin/dashboard`: active inventory, pending requests, completed-payment revenue, and confirmed
+  pay-on-arrival value.
+
+`Property.isFeatured` defaults to false. Admin-only `PATCH /api/properties/{id}/featured` accepts
+`{"isFeatured":true}`. A database row lock serializes selection, enforcing the maximum of three across
+concurrent API instances. Unpublished properties cannot be featured; unpublishing removes the feature flag.
+The public `GET /api/properties/featured` endpoint supplies the homepage without demo-listing fallback.
+Until an admin chooses properties, the homepage shows an empty selection with a link to browse all stays.
+The homepage's host CTA is a disabled “Coming soon” button.
+
+Admin inventory reads use `GET /api/admin/properties` and `GET /api/admin/properties/{id}`. Updates use
+`PUT /api/properties/{id}` with the same JSON and file parts as creation. Keep existing media URLs in the
+JSON to retain them; uploaded files are appended. Removing a media entry or deleting an unused property
+does not erase physical uploaded files, since links can be reused by other listings. `DELETE /api/properties/{id}`
+returns 409 if any reservation references the property; unpublish it instead to preserve historical trips.
+`GET /api/admin/bookings?all=true` returns the full register; omitting `all` retains the review-queue API.
+
+Payment completion is now explicitly stored as `Booking.paymentCompleted` (default false). Only records
+marked completed count toward `totalRevenue`; neither confirmation nor the mock credit-card choice proves
+payment. No payment-gateway, reconciliation endpoint, or real charge is introduced in Phase 4. Existing
+bookings remain uncompleted rather than guessing their payment history. `upcomingCash` follows the requested
+formula exactly: sum of all CONFIRMED + CASH_ON_ARRIVAL bookings. `estimatedRevenue` remains in the API for
+backward compatibility as confirmed booking value. All sums are calculated with database decimal amounts.
+
+## Verification
 
 ```text
 cd backend

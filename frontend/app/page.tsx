@@ -3,9 +3,18 @@ import { ArrowRight, Compass, KeyRound, ShieldCheck, Sparkles } from "lucide-rea
 
 import { AiSearchBar } from "@/components/property/ai-search-bar";
 import { PropertyCard } from "@/components/property/property-card";
-import { featuredProperties } from "@/lib/featured-properties";
+import { apiFetch } from "@/lib/api";
+import { toPropertyCardData } from "@/lib/property-presenters";
+import type { Property } from "@/types";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  let featuredProperties: Property[] = [];
+  let featuredUnavailable = false;
+  try {
+    featuredProperties = await apiFetch<Property[]>("/api/properties/featured", { authenticated: false });
+  } catch { featuredUnavailable = true; }
   return (
     <>
       <section className="zellige-overlay overflow-hidden bg-hero-glow">
@@ -64,7 +73,7 @@ export default function Home() {
             </h2>
           </div>
           <Link
-            href="/admin/properties/new"
+            href="/search"
             className="inline-flex items-center gap-2 text-sm font-bold text-majorelle-700 transition hover:gap-3 hover:text-majorelle-800"
           >
             Explore all stays <ArrowRight className="size-4" aria-hidden="true" />
@@ -72,9 +81,16 @@ export default function Home() {
         </div>
         <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {featuredProperties.map((property, index) => (
-            <PropertyCard key={property.id} property={property} eager={index === 0} />
+            <PropertyCard key={property.id} property={toPropertyCardData(property)} eager={index === 0} />
           ))}
         </div>
+        {featuredProperties.length === 0 && (
+          <div className="mt-6 rounded-3xl border border-dashed border-sand-300 bg-sand-50 p-8 text-center">
+            <p className="font-serif text-2xl font-semibold text-ink">{featuredUnavailable ? "Our featured stays are temporarily unavailable." : "Our next selection is on its way."}</p>
+            <p className="mt-2 text-sm text-sand-700">{featuredUnavailable ? "Please try again shortly, or explore the marketplace." : "Explore all stays while our team curates the homepage."}</p>
+            <Link href="/search" className="mt-4 inline-flex rounded-full bg-majorelle-600 px-5 py-3 text-sm font-bold text-white">Browse available stays</Link>
+          </div>
+        )}
       </section>
 
       <section id="how-it-works" className="border-y border-sand-200 bg-sand-50">
@@ -113,12 +129,12 @@ export default function Home() {
               Organize media, availability, and guest requests from one considered workspace.
             </p>
           </div>
-          <Link
-            href="/search"
-            className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-full bg-terracotta-500 px-6 text-sm font-bold text-white transition hover:bg-terracotta-400 lg:mt-0"
+          <button
+            type="button" disabled
+            className="mt-8 inline-flex min-h-12 cursor-not-allowed items-center gap-2 rounded-full bg-terracotta-500/60 px-6 text-sm font-bold text-white/80 lg:mt-0"
           >
-            Open the property studio <ArrowRight className="size-4" aria-hidden="true" />
-          </Link>
+            Coming soon
+          </button>
         </div>
       </section>
     </>
