@@ -36,15 +36,18 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final PropertyRepository propertyRepository;
     private final UserService userService;
+    private final NotificationService notificationService;
 
     public BookingService(
             BookingRepository bookingRepository,
             PropertyRepository propertyRepository,
-            UserService userService
+            UserService userService,
+            NotificationService notificationService
     ) {
         this.bookingRepository = bookingRepository;
         this.propertyRepository = propertyRepository;
         this.userService = userService;
+        this.notificationService = notificationService;
     }
 
     @Transactional(readOnly = true)
@@ -176,7 +179,9 @@ public class BookingService {
 
         booking.setStatus(requestedStatus);
         booking.setCancellationRequested(false);
-        return AdminBookingResponse.from(bookingRepository.saveAndFlush(booking));
+        Booking saved = bookingRepository.saveAndFlush(booking);
+        if (requestedStatus == BookingStatus.CONFIRMED) notificationService.notifyBookingApproved(saved);
+        return AdminBookingResponse.from(saved);
     }
 
     @Transactional
@@ -227,7 +232,9 @@ public class BookingService {
         if (approved) {
             booking.setStatus(BookingStatus.CANCELLED);
         }
-        return AdminBookingResponse.from(bookingRepository.saveAndFlush(booking));
+        Booking saved = bookingRepository.saveAndFlush(booking);
+        if (approved) notificationService.notifyCancellationApproved(saved);
+        return AdminBookingResponse.from(saved);
     }
 
     private Booking ownedBookingForUpdate(UUID bookingId, String googleSubject) {

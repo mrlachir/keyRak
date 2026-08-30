@@ -3,6 +3,7 @@ import { ArrowUpRight, BedDouble, Star, UsersRound } from "lucide-react";
 
 import { cn, formatPrice } from "@/lib/utils";
 import { PropertyImage } from "@/components/property/property-image";
+import { FavoriteButton } from "@/components/wishlist/favorite-button";
 import type { PropertyCardData } from "@/types";
 
 export function PropertyCard({
@@ -21,23 +22,26 @@ export function PropertyCard({
         compact ? "grid rounded-3xl sm:grid-cols-[12rem_1fr]" : "rounded-arch",
       )}
     >
-      <Link
-        href={`/properties/${property.id}`}
-        className={cn("relative block overflow-hidden", compact ? "min-h-52 sm:min-h-full" : "aspect-[4/3]")}
-      >
-        <PropertyImage
-          src={property.imageUrl}
-          alt={property.imageAlt}
-          fill
-          loading={eager ? "eager" : "lazy"}
-          sizes={compact ? "(max-width: 640px) 100vw, 12rem" : "(max-width: 768px) 100vw, 33vw"}
-          className="object-cover transition duration-700 group-hover:scale-105"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-ink/35 via-transparent to-transparent" />
-        <span className="absolute left-4 top-4 rounded-full bg-sand-50/90 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-terracotta-700 backdrop-blur">
-          {property.propertyType.toLowerCase()}
-        </span>
-      </Link>
+      <div className="relative min-w-0">
+        <Link
+          href={`/properties/${property.id}`}
+          className={cn("relative block overflow-hidden", compact ? "h-full min-h-52" : "aspect-[4/3]")}
+        >
+          <PropertyImage
+            src={property.imageUrl}
+            alt={property.imageAlt}
+            fill
+            loading={eager ? "eager" : "lazy"}
+            sizes={compact ? "(max-width: 640px) 100vw, 12rem" : "(max-width: 768px) 100vw, 33vw"}
+            className="object-cover transition duration-700 group-hover:scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-ink/35 via-transparent to-transparent" />
+          <span className={cn("absolute left-4 rounded-full bg-sand-50/90 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-terracotta-700 backdrop-blur", compact ? "top-4" : "bottom-5")}>
+            {property.propertyType.toLowerCase()}
+          </span>
+        </Link>
+        <FavoriteButton propertyId={property.id} title={property.title} className={compact ? "top-3" : "bottom-3"} />
+      </div>
       <div className={cn("p-5", compact && "flex flex-col justify-center") }>
         <div className="flex items-start justify-between gap-4">
           <div>

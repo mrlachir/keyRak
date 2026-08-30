@@ -9,6 +9,9 @@ import java.util.UUID;
 
 public interface ReviewRepository extends JpaRepository<Review, UUID> {
 
+    @EntityGraph(attributePaths = {"user", "property", "property.media"})
+    List<Review> findAllByOrderByCreatedAtDesc();
+
     @EntityGraph(attributePaths = {"user"})
     List<Review> findByPropertyIdOrderByCreatedAtDesc(UUID propertyId);
 

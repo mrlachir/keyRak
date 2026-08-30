@@ -29,7 +29,8 @@ public record AdminBookingResponse(
         boolean guestHasIdCard,
         Boolean cancellationRequested,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        PropertyResponse property
 ) {
     public static AdminBookingResponse from(Booking booking) {
         return new AdminBookingResponse(
@@ -52,7 +53,8 @@ public record AdminBookingResponse(
                 booking.getUser().getIdCardUrl() != null && !booking.getUser().getIdCardUrl().isBlank(),
                 Boolean.TRUE.equals(booking.getCancellationRequested()),
                 booking.getCreatedAt(),
-                booking.getUpdatedAt()
+                booking.getUpdatedAt(),
+                PropertyResponse.from(booking.getProperty())
         );
     }
 }

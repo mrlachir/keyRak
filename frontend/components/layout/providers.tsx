@@ -2,11 +2,12 @@
 
 import { SessionProvider } from "next-auth/react";
 import { Toaster } from "sonner";
+import { WishlistProvider } from "@/components/wishlist/wishlist-provider";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
-      {children}
+      <WishlistProvider>{children}</WishlistProvider>
       <Toaster
         position="top-right"
         richColors

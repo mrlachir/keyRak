@@ -7,6 +7,7 @@ import { BookingSidebar } from "@/components/booking/booking-sidebar";
 import { PropertyMediaViewer } from "@/components/property/property-media-viewer";
 import { PropertyReviews } from "@/components/property/property-reviews";
 import { PropertyStaticMapShell } from "@/components/property/property-static-map-shell";
+import { FavoriteButton } from "@/components/wishlist/favorite-button";
 import { getOptionalProfile } from "@/lib/management";
 import { getBlockedDates, getProperty, getPropertyReviews } from "@/lib/properties";
 
@@ -56,9 +57,12 @@ export default async function PropertyPage({ params }: PageProps<"/properties/[i
   return (
     <div className="bg-sand-100">
       <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-        <Link href="/search" className="inline-flex items-center gap-2 text-sm font-bold text-sand-700 transition hover:text-majorelle-700">
-          <ArrowLeft className="size-4" aria-hidden="true" /> Back to search
-        </Link>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Link href="/search" className="inline-flex items-center gap-2 text-sm font-bold text-sand-700 transition hover:text-majorelle-700">
+            <ArrowLeft className="size-4" aria-hidden="true" /> Back to search
+          </Link>
+          <FavoriteButton propertyId={property.id} title={property.title} variant="label" />
+        </div>
 
         <div className="mt-7 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-start">
           <div className="min-w-0">

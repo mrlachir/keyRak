@@ -10,6 +10,7 @@ import com.keyrak.marketplace.repository.PropertyRepository;
 import com.keyrak.marketplace.repository.ReviewRepository;
 import com.keyrak.marketplace.web.dto.CreateReviewRequest;
 import com.keyrak.marketplace.web.dto.ReviewResponse;
+import com.keyrak.marketplace.web.dto.AdminReviewResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,17 +27,25 @@ public class ReviewService {
     private final BookingRepository bookingRepository;
     private final PropertyRepository propertyRepository;
     private final UserService userService;
+    private final NotificationService notificationService;
 
     public ReviewService(
             ReviewRepository reviewRepository,
             BookingRepository bookingRepository,
             PropertyRepository propertyRepository,
-            UserService userService
+            UserService userService,
+            NotificationService notificationService
     ) {
         this.reviewRepository = reviewRepository;
         this.bookingRepository = bookingRepository;
         this.propertyRepository = propertyRepository;
         this.userService = userService;
+        this.notificationService = notificationService;
+    }
+
+    @Transactional(readOnly = true)
+    public List<AdminReviewResponse> listAdmin() {
+        return reviewRepository.findAllByOrderByCreatedAtDesc().stream().map(AdminReviewResponse::from).toList();
     }
 
     @Transactional(readOnly = true)
@@ -80,7 +89,9 @@ public class ReviewService {
                 .rating(request.rating())
                 .comment(request.comment().trim())
                 .build();
-        return ReviewResponse.from(reviewRepository.saveAndFlush(review));
+        Review savedReview = reviewRepository.saveAndFlush(review);
+        notificationService.notifyAdminsOfReview(savedReview);
+        return ReviewResponse.from(savedReview);
     }
 
     @Transactional

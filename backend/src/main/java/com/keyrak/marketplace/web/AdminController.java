@@ -2,6 +2,8 @@ package com.keyrak.marketplace.web;
 
 import com.keyrak.marketplace.service.BookingService;
 import com.keyrak.marketplace.service.PropertyService;
+import com.keyrak.marketplace.service.ReviewService;
+import com.keyrak.marketplace.web.dto.AdminReviewResponse;
 import com.keyrak.marketplace.repository.UserRepository;
 import com.keyrak.marketplace.web.dto.AdminUserResponse;
 import com.keyrak.marketplace.web.dto.PropertyResponse;
@@ -31,11 +33,13 @@ public class AdminController {
     private final BookingService bookingService;
     private final PropertyService propertyService;
     private final UserRepository userRepository;
+    private final ReviewService reviewService;
 
-    public AdminController(BookingService bookingService, PropertyService propertyService, UserRepository userRepository) {
+    public AdminController(BookingService bookingService, PropertyService propertyService, UserRepository userRepository, ReviewService reviewService) {
         this.bookingService = bookingService;
         this.propertyService = propertyService;
         this.userRepository = userRepository;
+        this.reviewService = reviewService;
     }
 
     @GetMapping("/dashboard/metrics")
@@ -50,6 +54,9 @@ public class AdminController {
 
     @GetMapping("/properties")
     public List<PropertyResponse> getProperties() { return propertyService.listAdmin(); }
+
+    @GetMapping("/reviews")
+    public List<AdminReviewResponse> getReviews() { return reviewService.listAdmin(); }
 
     @GetMapping("/properties/{id}")
     public PropertyResponse getProperty(@PathVariable UUID id) { return propertyService.getAdmin(id); }

@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { cn } from "@/lib/utils";
 
-export function Logo({ className }: { className?: string }) {
+export function Logo({ className, compactOnMobile = false }: { className?: string; compactOnMobile?: boolean }) {
   return (
     <Link
       href="/"
@@ -16,7 +16,7 @@ export function Logo({ className }: { className?: string }) {
         <span className="absolute inset-x-2 bottom-0 top-3 rounded-t-full border-2 border-sand-50/90" />
         <span className="size-1 rounded-full bg-sand-50" />
       </span>
-      <span className="font-serif text-2xl font-semibold tracking-[0.14em] text-ink transition group-hover:text-terracotta-700">
+      <span className={cn("font-serif text-2xl font-semibold tracking-[0.14em] text-ink transition group-hover:text-terracotta-700", compactOnMobile && "hidden sm:inline")}>
         KEYRAK
       </span>
     </Link>

@@ -1,7 +1,7 @@
 "use client";
 
 import { DayPicker, type DateRange } from "@daypicker/react";
-import { Banknote, CircleCheck, CreditCard, FileCheck2, LoaderCircle, Minus, Plus, ShieldCheck, Upload, UsersRound, X } from "lucide-react";
+import { Banknote, CircleCheck, CreditCard, FileCheck2, LoaderCircle, Minus, Plus, Upload, UsersRound, X } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -337,7 +337,7 @@ export function BookingModal({
                     />
                     <span>
                       <span className="flex items-center gap-2 text-sm font-bold text-ink"><CreditCard className="size-4 text-majorelle-600" aria-hidden="true" /> Test credit card</span>
-                      <span className="mt-1 block text-xs leading-5 text-sand-600">Demo checkout—no real charge.</span>
+                      <span className="mt-1 block text-xs leading-5 text-sand-600">Test mode · No real charge.</span>
                     </span>
                   </span>
                 </label>
@@ -364,10 +364,6 @@ export function BookingModal({
 
               {paymentMethod === "CREDIT_CARD" && (
                 <div className="mt-3 rounded-2xl border border-majorelle-100 bg-majorelle-50/60 p-4" aria-label="Test credit card form">
-                  <div className="mb-4 flex items-start gap-2 rounded-xl border border-majorelle-100 bg-white/70 px-3 py-2.5 text-xs leading-5 text-majorelle-800">
-                    <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                    <span><strong>Safe demo payment.</strong> Use the test details below. No charge is made and card details never leave this browser.</span>
-                  </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <label className="text-xs font-bold uppercase tracking-[0.1em] text-sand-700 sm:col-span-2">
                       Card number
@@ -421,7 +417,7 @@ export function BookingModal({
                   </div>
                   <p className={`mt-3 flex items-center gap-1.5 text-xs font-semibold ${cardDetailsAreValid ? "text-olive-700" : "text-terracotta-700"}`}>
                     {cardDetailsAreValid ? <CircleCheck className="size-4" aria-hidden="true" /> : <CreditCard className="size-4" aria-hidden="true" />}
-                    {cardDetailsAreValid ? "Test card verified — ready to submit." : "Enter 4242 4242 4242 4242, a future expiry, and a 3-digit CVC."}
+                    {cardDetailsAreValid ? "Ready to submit." : "Enter 4242 4242 4242 4242, a future expiry, and a 3-digit CVC."}
                   </p>
                 </div>
               )}

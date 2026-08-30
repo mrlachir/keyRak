@@ -5,7 +5,7 @@ import { getServerSession } from "next-auth";
 import { apiFetch } from "@/lib/api";
 import { requireAdminSession, requireAuthenticatedSession } from "@/lib/access";
 import { authOptions } from "@/lib/auth";
-import type { AdminBooking, AdminDashboardMetrics, AdminUser, Property, Trip, UserProfileResponse } from "@/types";
+import type { AdminBooking, AdminDashboardMetrics, AdminReview, AdminUser, Property, Trip, UserProfileResponse } from "@/types";
 
 export async function getAdminDashboardMetrics(): Promise<AdminDashboardMetrics> {
   await requireAdminSession("/admin/dashboard");
@@ -15,6 +15,11 @@ export async function getAdminDashboardMetrics(): Promise<AdminDashboardMetrics>
 export async function getAdminBookings(): Promise<AdminBooking[]> {
   await requireAdminSession("/admin/bookings");
   return apiFetch<AdminBooking[]>("/api/admin/bookings?all=true");
+}
+
+export async function getAdminReviews(): Promise<AdminReview[]> {
+  await requireAdminSession("/admin/bookings");
+  return apiFetch<AdminReview[]>("/api/admin/reviews");
 }
 
 export async function getAdminProperties(): Promise<Property[]> {

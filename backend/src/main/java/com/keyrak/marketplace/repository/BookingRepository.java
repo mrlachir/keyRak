@@ -32,7 +32,7 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
             """)
     BigDecimal sumConfirmedCashOnArrival();
 
-    @EntityGraph(attributePaths = {"property", "user"})
+    @EntityGraph(attributePaths = {"property", "property.media", "user"})
     List<Booking> findAllByOrderByCreatedAtDesc();
 
     @Query("select coalesce(sum(booking.totalPrice), 0) from Booking booking where booking.status = :status")
@@ -41,7 +41,7 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
     @EntityGraph(attributePaths = {"property", "user"})
     List<Booking> findByStatusOrderByCreatedAtAsc(BookingStatus status);
 
-    @EntityGraph(attributePaths = {"property", "user"})
+    @EntityGraph(attributePaths = {"property", "property.media", "user"})
     @Query("""
             select booking from Booking booking
             where booking.status = com.keyrak.marketplace.domain.enumeration.BookingStatus.PENDING

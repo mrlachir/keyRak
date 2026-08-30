@@ -70,7 +70,7 @@ function BookingCard({ trip: initialTrip }: { trip: Trip }) {
   }
 
   return (
-    <article className="surface-card overflow-hidden rounded-[2rem]">
+    <article id={`booking-${trip.id}`} className="surface-card scroll-mt-28 overflow-hidden rounded-[2rem] target:ring-2 target:ring-majorelle-400">
       <div className="grid lg:grid-cols-[15rem_minmax(0,1fr)]">
         <Link href={`/properties/${trip.propertyId}`} className="group relative min-h-56 overflow-hidden bg-sand-200 lg:min-h-full" aria-label={`View ${trip.propertyTitle}`}>
           <PropertyImage
@@ -131,7 +131,7 @@ function BookingCard({ trip: initialTrip }: { trip: Trip }) {
               <dt className="text-[0.65rem] font-extrabold uppercase tracking-[0.12em] text-sand-600">Payment method</dt>
               <dd className="mt-2"><PaymentMethodBadge paymentMethod={trip.paymentMethod} /></dd>
               <dd className="mt-2 text-xs font-medium leading-5 text-sand-600">
-                {trip.paymentMethod === "CREDIT_CARD" ? "Demo card selected; no real charge was made." : trip.paymentMethod === "CASH_ON_ARRIVAL" ? "Payment is due directly at check-in." : "This older reservation has no saved payment method."}
+                {trip.paymentMethod === "CREDIT_CARD" ? "Test mode · No real charge." : trip.paymentMethod === "CASH_ON_ARRIVAL" ? "Payment is due directly at check-in." : "Payment method not recorded."}
               </dd>
             </div>
 
@@ -194,7 +194,7 @@ function BookingCard({ trip: initialTrip }: { trip: Trip }) {
 export function ProfileBookingList({ trips }: { trips: Trip[] }) {
   return (
     <div className="mt-10 grid gap-5">
-      {trips.map((trip) => <BookingCard key={trip.id} trip={trip} />)}
+      {trips.map((trip) => <BookingCard key={`${trip.id}:${trip.status}:${trip.cancellationRequested}`} trip={trip} />)}
     </div>
   );
 }

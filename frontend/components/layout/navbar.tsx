@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { Heart } from "lucide-react";
 
 import { AuthButton } from "@/components/layout/auth-button";
 import { Logo } from "@/components/ui/logo";
+import { NotificationCenter } from "@/components/layout/notification-center";
 
 const navItems = [
   { href: "/search", label: "Explore stays" },
@@ -13,8 +15,8 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-sand-200/80 bg-sand-100/90 backdrop-blur-xl">
       <div className="mx-auto flex h-20 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Logo />
-        <nav className="hidden items-center gap-7 md:flex" aria-label="Primary navigation">
+        <Logo compactOnMobile />
+        <nav className="hidden items-center gap-7 lg:flex" aria-label="Primary navigation">
           {navItems.map((item) => (
             <Link
               key={item.href}
@@ -25,7 +27,11 @@ export function Navbar() {
             </Link>
           ))}
         </nav>
-        <AuthButton />
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Link href="/wishlist" aria-label="Your wishlist" title="Your wishlist" className="grid size-11 place-items-center rounded-full border border-sand-200 bg-sand-50 text-sand-800 transition hover:border-terracotta-200 hover:text-terracotta-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-majorelle-500"><Heart className="size-5" aria-hidden="true" /></Link>
+          <NotificationCenter />
+          <AuthButton />
+        </div>
       </div>
     </header>
   );

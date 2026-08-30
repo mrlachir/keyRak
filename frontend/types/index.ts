@@ -119,6 +119,21 @@ export interface AdminBooking {
   cancellationRequested: boolean;
   createdAt: string;
   updatedAt: string;
+  property: Property;
+}
+
+export interface AdminReview {
+  id: UUID;
+  authorId: UUID;
+  authorName?: string | null;
+  authorEmail: string;
+  authorTelephone?: string | null;
+  authorAvatarUrl?: string | null;
+  rating: number;
+  comment: string;
+  createdAt: string;
+  updatedAt: string;
+  property: Property;
 }
 
 export interface Trip {
@@ -245,6 +260,19 @@ export interface Review {
 export interface CreateReviewRequest {
   rating: number;
   comment: string;
+}
+
+export interface UserNotification {
+  id: UUID;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+  targetUrl?: string | null;
+}
+
+export interface NotificationInbox {
+  unreadCount: number;
+  notifications: UserNotification[];
 }
 
 export type ActionResult<T> =

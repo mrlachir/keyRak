@@ -5,7 +5,7 @@ import { requireAdminSession } from "@/lib/access";
 
 const adminLinks = [
   { href: "/admin/dashboard", label: "Overview", icon: BarChart3 },
-  { href: "/admin/bookings", label: "Reservations", icon: CalendarCheck2 },
+  { href: "/admin/bookings", label: "Booking control", icon: CalendarCheck2 },
   { href: "/admin/properties", label: "Properties", icon: Building2 },
   { href: "/admin/users", label: "Users", icon: UsersRound },
   { href: "/admin/properties/new", label: "New property", icon: PlusCircle },

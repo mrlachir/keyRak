@@ -45,6 +45,9 @@ class BookingServiceTest {
     @Mock
     private UserService userService;
 
+    @Mock
+    private NotificationService notificationService;
+
     private BookingService bookingService;
     private Property property;
     private User user;
@@ -54,7 +57,8 @@ class BookingServiceTest {
         bookingService = new BookingService(
                 bookingRepository,
                 propertyRepository,
-                userService
+                userService,
+                notificationService
         );
         property = Property.builder()
                 .id(UUID.randomUUID())

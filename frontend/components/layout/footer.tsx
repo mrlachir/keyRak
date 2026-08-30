@@ -12,11 +12,14 @@ export function Footer() {
             Thoughtful stays, local character, and a simpler way to find your place in Marrakesh.
           </p>
         </div>
-        <div className="flex flex-wrap items-start gap-x-8 gap-y-3 text-sm font-semibold text-sand-800">
-          <Link href="/search" className="hover:text-majorelle-700">Explore</Link>
-          <Link href="/#hosts" className="hover:text-majorelle-700">List a property</Link>
-          <Link href="/#support" className="hover:text-majorelle-700">Support</Link>
-        </div>
+        <nav aria-label="Footer navigation" className="grid grid-cols-2 gap-x-10 gap-y-3 text-sm font-semibold text-sand-800">
+          <Link href="/search" className="hover:text-majorelle-700">Explore stays</Link>
+          <Link href="/about" className="hover:text-majorelle-700">About us</Link>
+          <Link href="/wishlist" className="hover:text-majorelle-700">Your wishlist</Link>
+          <Link href="/contact" className="hover:text-majorelle-700">Contact & support</Link>
+          <Link href="/privacy" className="hover:text-majorelle-700">Privacy</Link>
+          <Link href="/terms" className="hover:text-majorelle-700">Terms</Link>
+        </nav>
         <p className="text-xs text-sand-700 md:col-span-2">
           © {new Date().getFullYear()} KEYRAK. Crafted in Marrakesh.
         </p>

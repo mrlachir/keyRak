@@ -122,6 +122,60 @@ bookings remain uncompleted rather than guessing their payment history. `upcomin
 formula exactly: sum of all CONFIRMED + CASH_ON_ARRIVAL bookings. `estimatedRevenue` remains in the API for
 backward compatibility as confirmed booking value. All sums are calculated with database decimal amounts.
 
+## Phase 5: wishlists, review notifications, and information pages
+
+Every property card has a heart button. Signing in lets guests save or remove a stay; `/wishlist`
+is an authenticated, account-private collection. The navbar and footer both link to it. Duplicate saves
+and removals are idempotent, and a unique `(user_id, property_id)` constraint prevents duplicate entries.
+Unpublished stays are hidden from the grid without erasing the saved preference; deleting an unused
+property removes its wishlist references, not its users.
+
+Authenticated, subject-scoped API routes:
+
+- `GET /api/users/me/wishlist`: saved, published properties, newest saves first.
+- `GET /api/users/me/wishlist/ids`: IDs for synchronizing heart buttons across the site.
+- `POST /api/users/me/wishlist/{propertyId}`: save a published property (204).
+- `DELETE /api/users/me/wishlist/{propertyId}`: remove a save (204).
+- `GET /api/users/me/notifications`: `{ unreadCount, notifications }`, latest 20 unread alerts.
+- `PATCH /api/users/me/notifications/{id}/read`: mark an owned alert read (204).
+- `PATCH /api/users/me/notifications/read-all`: mark only the current account's alerts read (204).
+
+A successfully created review writes one notification for every registered ADMIN in the same database
+transaction. Invalid, ineligible, and duplicate submissions do not create alerts. Notifications contain
+the property title, not guest contact or ID details. Other recipients' alerts return 404 even for admins.
+The bell refreshes on open, window focus, and every 30 seconds while the document is visible; opening it
+does not mark anything read. Individual and bulk read actions are explicit. The UI shows errors and retries
+without treating failed API calls as an empty wishlist/inbox. All browser actions use server-side
+`lib/api.ts` JWT forwarding. No new browser-exposed credentials or dependencies are required.
+
+Hibernate `ddl-auto=update` creates `wishlist_entries` and `notifications` on backend startup.
+Rebuild both services with `docker compose up -d --build`; the existing database and upload volumes are retained.
+
+Public `/about`, `/contact`, `/privacy`, and `/terms` pages share the Marrakesh theme and working footer links.
+Optional `SUPPORT_EMAIL` and `SUPPORT_PHONE` values in root `.env` (Docker) or `frontend/.env.local`
+(local Next.js) populate the contact page at runtime. Without configured values it explains that support
+details are not available; there is no fake contact form or invented destination. Privacy and Terms describe
+the application without development banners. They still require an operator-specific legal review before
+public launch; removing UI boilerplate does not supply missing legal/operator details.
+
+### Wishlist and notification refinements
+
+- Property details now have a labeled **Save to wishlist** toggle synchronized with card hearts.
+- Successful admin booking approval creates a guest alert; approved cancellation creates a separate guest
+  alert. These records commit in the same transaction as the status change. Conflicting retries and rejected
+  decisions do not emit approval alerts. Client notification links open the corresponding profile booking.
+- Notifications include an optional `targetUrl` column (added by Hibernate update). New review alerts link
+  directly to `/admin/bookings?tab=reviews&review={id}` and open the corresponding detail popup.
+- Booking Control contains All, Booking Requests, Cancellation Requests, and Reviews. All retains the full
+  reservation history and also includes guest reviews. `GET /api/admin/reviews` is ADMIN-only and returns
+  review text, rating, author contacts, timestamps, and property details/media. Admin booking responses also
+  include `property` details/media. Neither endpoint exposes private ID paths or OAuth identifiers.
+- Clicking a reservation or review opens a keyboard-accessible native dialog with property photos, links,
+  and full details. Reservation decisions can also be made inside the dialog. Unpublished properties link
+  to the protected studio rather than a missing public page.
+- Long demo/draft banners have been removed. Credit cards remain clearly marked **Test mode · No real
+  charge**, because this application still has no live payment gateway.
+
 ## Verification
 
 ```text

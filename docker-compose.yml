@@ -77,6 +77,8 @@ services:
       JWT_ISSUER: ${JWT_ISSUER:-keyrak-nextauth}
       JWT_AUDIENCE: ${JWT_AUDIENCE:-keyrak-api}
       BACKEND_API_URL: http://backend:8080
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL:-}
+      SUPPORT_PHONE: ${SUPPORT_PHONE:-}
     secrets:
       - nextauth_secret
       - google_client_secret
