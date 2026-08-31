@@ -16,6 +16,7 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     googleSubject?: string;
+    oauthLoginAt?: number;
     emailVerified?: boolean;
     role?: UserRole;
     backendAccessToken?: string;

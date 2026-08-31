@@ -10,6 +10,7 @@ FROM base AS build
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
 ENV NODE_ENV=production
+ENV NEXT_BUILD_OUTPUT=standalone
 ENV NEXTAUTH_URL=http://localhost:3000
 ENV NEXTAUTH_SECRET=build-only-nextauth-secret-at-least-32-bytes
 ENV GOOGLE_CLIENT_ID=build-only-google-client-id
@@ -34,7 +35,8 @@ COPY --from=build --chown=nextjs:nodejs /app/public ./public
 COPY --from=build --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=build --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --chown=nextjs:nodejs docker-entrypoint.sh /usr/local/bin/keyrak-entrypoint
-RUN chmod 0555 /usr/local/bin/keyrak-entrypoint
+RUN sed -i 's/\r$//' /usr/local/bin/keyrak-entrypoint && \
+    chmod 0555 /usr/local/bin/keyrak-entrypoint
 
 USER nextjs
 EXPOSE 3000

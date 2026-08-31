@@ -96,6 +96,8 @@ export interface AdminUser {
   telephone?: string | null;
   role: UserRole;
   createdAt: string;
+  avatarUrl?: string | null;
+  hasIdCard: boolean;
 }
 
 export interface AdminBooking {

@@ -7,9 +7,10 @@ import java.util.UUID;
 
 /** Deliberately excludes Google identifiers and private identity-document paths. */
 public record AdminUserResponse(UUID id, String displayName, String email, String telephone,
-                                UserRole role, Instant createdAt) {
+                                UserRole role, Instant createdAt, String avatarUrl, boolean hasIdCard) {
     public static AdminUserResponse from(User user) {
         return new AdminUserResponse(user.getId(), user.getDisplayName(), user.getEmail(),
-                user.getTelephone(), user.getRole(), user.getCreatedAt());
+                user.getTelephone(), user.getRole(), user.getCreatedAt(), user.getAvatarUrl(),
+                user.getIdCardUrl() != null && !user.getIdCardUrl().isBlank());
     }
 }

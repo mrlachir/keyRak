@@ -152,6 +152,9 @@ class AdminManagementIntegrationTest {
     }
 
     private RequestPostProcessor admin() {
+        users.findByGoogleSubject("management-admin").orElseGet(() -> users.saveAndFlush(User.builder()
+                .googleSubject("management-admin").email("management-admin@example.test")
+                .role(com.keyrak.marketplace.domain.enumeration.UserRole.ADMIN).build()));
         return jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))
                 .jwt(token -> token.subject("management-admin").claim("email", "management-admin@example.test"));
     }

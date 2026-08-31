@@ -21,6 +21,14 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByGoogleSubject(String googleSubject);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from User u where u.id = :id")
+    Optional<User> findByIdForUpdate(@Param("id") UUID id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from User u where u.role = com.keyrak.marketplace.domain.enumeration.UserRole.ADMIN order by u.id")
+    List<User> lockAdministrators();
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select u from User u where u.googleSubject = :subject")
     Optional<User> findByGoogleSubjectForUpdate(@Param("subject") String googleSubject);
 }

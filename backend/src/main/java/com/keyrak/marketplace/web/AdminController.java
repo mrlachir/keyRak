@@ -4,10 +4,17 @@ import com.keyrak.marketplace.service.BookingService;
 import com.keyrak.marketplace.service.PropertyService;
 import com.keyrak.marketplace.service.ReviewService;
 import com.keyrak.marketplace.web.dto.AdminReviewResponse;
-import com.keyrak.marketplace.repository.UserRepository;
+import com.keyrak.marketplace.service.AdminUserService;
+import com.keyrak.marketplace.web.dto.UpdateUserRoleRequest;
 import com.keyrak.marketplace.web.dto.AdminUserResponse;
 import com.keyrak.marketplace.web.dto.PropertyResponse;
-import org.springframework.data.domain.Sort;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ContentDisposition;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import com.keyrak.marketplace.web.dto.AdminBookingResponse;
 import com.keyrak.marketplace.web.dto.AdminDashboardResponse;
@@ -32,13 +39,13 @@ public class AdminController {
 
     private final BookingService bookingService;
     private final PropertyService propertyService;
-    private final UserRepository userRepository;
+    private final AdminUserService adminUserService;
     private final ReviewService reviewService;
 
-    public AdminController(BookingService bookingService, PropertyService propertyService, UserRepository userRepository, ReviewService reviewService) {
+    public AdminController(BookingService bookingService, PropertyService propertyService, AdminUserService adminUserService, ReviewService reviewService) {
         this.bookingService = bookingService;
         this.propertyService = propertyService;
-        this.userRepository = userRepository;
+        this.adminUserService = adminUserService;
         this.reviewService = reviewService;
     }
 
@@ -63,8 +70,31 @@ public class AdminController {
 
     @GetMapping("/users")
     public List<AdminUserResponse> getUsers() {
-        return userRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
-                .stream().map(AdminUserResponse::from).toList();
+        return adminUserService.list();
+    }
+
+    @GetMapping("/users/{id}")
+    public AdminUserResponse getUser(@PathVariable UUID id) { return adminUserService.get(id); }
+
+    @PatchMapping("/users/{id}/role")
+    public AdminUserResponse updateUserRole(@PathVariable UUID id, @Valid @RequestBody UpdateUserRoleRequest request,
+                                             JwtAuthenticationToken authentication) {
+        return adminUserService.updateRole(id, request.role(), authentication.getToken().getSubject());
+    }
+
+    @DeleteMapping("/users/{id}")
+    public ResponseEntity<Void> deleteUser(@PathVariable UUID id, JwtAuthenticationToken authentication) {
+        adminUserService.delete(id, authentication.getToken().getSubject());
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/users/{id}/id-card")
+    public ResponseEntity<Resource> getUserIdCard(@PathVariable UUID id) {
+        var document = adminUserService.getIdCard(id);
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore().cachePrivate())
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.inline().filename(document.filename()).build().toString())
+                .header("X-Content-Type-Options", "nosniff")
+                .contentType(document.contentType()).body(document.resource());
     }
 
     @PatchMapping("/bookings/{bookingId}/status")

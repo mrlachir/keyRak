@@ -3,6 +3,8 @@ package com.keyrak.marketplace.service;
 import com.keyrak.marketplace.domain.entity.User;
 import com.keyrak.marketplace.domain.enumeration.UserRole;
 import com.keyrak.marketplace.repository.UserRepository;
+import com.keyrak.marketplace.repository.AccountSessionRevocationRepository;
+import com.keyrak.marketplace.security.AccountIdentityFingerprint;
 import com.keyrak.marketplace.security.InvalidGoogleIdentityException;
 import com.keyrak.marketplace.web.dto.UpdateUserProfileRequest;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -20,15 +22,25 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final BookingDocumentStorageService documentStorageService;
+    private final AccountSessionRevocationRepository sessionRevocations;
 
-    public UserService(UserRepository userRepository, BookingDocumentStorageService documentStorageService) {
+    public UserService(UserRepository userRepository, BookingDocumentStorageService documentStorageService,
+                       AccountSessionRevocationRepository sessionRevocations) {
         this.userRepository = userRepository;
         this.documentStorageService = documentStorageService;
+        this.sessionRevocations = sessionRevocations;
     }
 
     @Transactional
     public User synchronizeGoogleUser(Jwt jwt) {
         String googleSubject = requiredClaim(jwt.getSubject(), "JWT subject");
+        sessionRevocations.findById(AccountIdentityFingerprint.of(googleSubject)).ifPresent(revocation -> {
+            Object authTime = jwt.getClaims().get("auth_time");
+            // Use the original OAuth login time, never the short-lived token's refresh/issued time.
+            if (!(authTime instanceof Number time) || time.longValue() <= revocation.getRevokedBefore().getEpochSecond()) {
+                throw new InvalidGoogleIdentityException("This account session was revoked. Sign in with Google again.");
+            }
+        });
         String email = normalizeEmail(jwt.getClaimAsString("email"));
         Boolean emailVerified = jwt.getClaimAsBoolean("email_verified");
         if (Boolean.FALSE.equals(emailVerified)) {

@@ -56,6 +56,13 @@ class PropertyMediaAndReviewIntegrationTest {
     @Autowired ReviewRepository reviewRepository;
     @Autowired FileStorageService fileStorageService;
 
+    @org.junit.jupiter.api.BeforeEach
+    void persistedAdminRoles() {
+        for (String subject : List.of("upload-admin", "mixed-media-admin", "failed-upload-admin", "invalid-media-admin")) {
+            user(subject, UserRole.ADMIN);
+        }
+    }
+
     @Test
     void multipartPropertyStoresAllMediaAndServesOnlyPublicMedia() throws Exception {
         MockMultipartFile details = new MockMultipartFile("property", "property.json", "application/json", """

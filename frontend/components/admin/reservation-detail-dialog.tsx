@@ -1,5 +1,7 @@
 "use client";
 
+import { SecureIdCard } from "@/components/admin/secure-id-card";
+
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, ExternalLink, ImageIcon, MapPin, Star, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
@@ -99,6 +101,7 @@ export function ReservationDetailDialog({ booking, review, actions, busy, onClos
               <Field label="Government ID">{booking.guestHasIdCard ? "On file in guest profile" : "Not on file"}</Field>
               <Field label="Requested">{shortDate(booking.createdAt)}</Field><Field label="Last updated">{shortDate(booking.updatedAt)}</Field>
             </dl>
+            {booking.guestHasIdCard && <div className="mt-4"><SecureIdCard userId={booking.userId} /></div>}
             <section className="mt-4 rounded-2xl border border-sand-200 p-4"><h4 className="text-xs font-bold uppercase tracking-widest text-sand-700">Special requests</h4><p className="mt-2 whitespace-pre-wrap break-words text-sm leading-7">{booking.specialRequests || "No special requests."}</p></section>
             <p className="mt-4 break-all font-mono text-xs text-sand-700">Booking reference: {booking.id}</p>
             <div className="mt-5 border-t border-sand-200 pt-5">{actions}</div>

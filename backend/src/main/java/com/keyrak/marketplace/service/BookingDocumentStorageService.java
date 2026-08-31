@@ -16,6 +16,10 @@ import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.MediaType;
+import java.nio.file.LinkOption;
 
 @Service
 public class BookingDocumentStorageService {
@@ -88,9 +92,7 @@ public class BookingDocumentStorageService {
     }
 
     public void deleteQuietly(String storedUrl) {
-        if (storedUrl == null || storedUrl.isBlank()) {
-            return;
-        }
+        if (!isDocumentPath(storedUrl)) return;
         try {
             String fileName = Path.of(storedUrl).getFileName().toString();
             Path target = storageDirectory.resolve(fileName).normalize();
@@ -100,5 +102,33 @@ public class BookingDocumentStorageService {
         } catch (IOException | RuntimeException exception) {
             log.warn("Could not remove unused profile ID document", exception);
         }
+    }
+
+    public record StoredDocument(Resource resource, MediaType contentType, String filename) {}
+
+    /** Called only after authorization against the owning profile, never a caller-supplied path. */
+    public StoredDocument read(String storedUrl) {
+        if (!isDocumentPath(storedUrl)) throw unavailable();
+        String filename = storedUrl.substring("/uploads/id-cards/".length());
+        Path file = storageDirectory.resolve(filename).normalize();
+        String extension = filename.substring(filename.lastIndexOf('.')).toLowerCase(Locale.ROOT);
+        String contentType = ALLOWED_CONTENT_TYPES.entrySet().stream()
+                .filter(entry -> entry.getValue().equals(extension)).map(Map.Entry::getKey).findFirst().orElse(null);
+        try {
+            if (contentType == null || !file.getParent().equals(storageDirectory)
+                    || !Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS) || !Files.isReadable(file)
+                    || !file.toRealPath().getParent().equals(storageDirectory.toRealPath())) throw unavailable();
+            return new StoredDocument(new FileSystemResource(file), MediaType.parseMediaType(contentType), "identity-document" + extension);
+        } catch (IOException exception) {
+            throw unavailable();
+        }
+    }
+
+    private boolean isDocumentPath(String path) {
+        return path != null && path.matches("/uploads/id-cards/[A-Za-z0-9][A-Za-z0-9_-]*\\.[A-Za-z0-9]+$");
+    }
+
+    private ResponseStatusException unavailable() {
+        return new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not available");
     }
 }

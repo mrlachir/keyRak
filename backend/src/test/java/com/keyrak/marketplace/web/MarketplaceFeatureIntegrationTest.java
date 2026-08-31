@@ -53,6 +53,12 @@ class MarketplaceFeatureIntegrationTest {
     @Autowired
     private BookingRepository bookingRepository;
 
+    @org.junit.jupiter.api.BeforeEach
+    void persistedAdminRole() {
+        userRepository.saveAndFlush(User.builder().googleSubject("admin-google-account").email("admin@example.com")
+                .role(com.keyrak.marketplace.domain.enumeration.UserRole.ADMIN).build());
+    }
+
     @Test
     void publicSearchAndBlockedDatesReturnBackendPropertyData() throws Exception {
         Property property = createProperty("Integration Villa");

@@ -20,14 +20,15 @@ export interface ApiFetchOptions extends RequestInit {
   authenticated?: boolean;
 }
 
-export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
+/** The shared authenticated transport also supports private binary documents. */
+export async function apiFetchResponse(path: string, options: ApiFetchOptions = {}): Promise<Response> {
   if (!path.startsWith("/")) {
     throw new Error("API paths must begin with '/'");
   }
 
   const { authenticated = true, headers: suppliedHeaders, ...requestInit } = options;
   const headers = new Headers(suppliedHeaders);
-  headers.set("Accept", "application/json");
+  if (!headers.has("Accept")) headers.set("Accept", "application/json");
 
   const hasMultipartBody = typeof FormData !== "undefined" && requestInit.body instanceof FormData;
   if (requestInit.body && !hasMultipartBody && !headers.has("Content-Type")) {
@@ -56,6 +57,11 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
     throw new ApiError(`Backend request failed with HTTP ${response.status}`, response.status, body);
   }
 
+  return response;
+}
+
+export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
+  const response = await apiFetchResponse(path, options);
   if (response.status === 204) {
     return undefined as T;
   }

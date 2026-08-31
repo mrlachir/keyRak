@@ -60,6 +60,10 @@ npm run typecheck
 npm run build
 ```
 
-Vercel currently uses the standard Next.js output. The legacy Dockerfile expects standalone output and requires
-that separate build mode to be enabled if you deploy with Docker. Compose supplies runtime secrets and the
+Vercel uses the standard Next.js output. The Dockerfile sets `NEXT_BUILD_OUTPUT=standalone` so its build
+generates the standalone server. Compose supplies runtime secrets and the
 public media origin build argument; never expose JWT/Google secrets through `NEXT_PUBLIC_` variables.
+
+The Compose frontend runs a built image, not a hot-reloading source mount. After changing application code,
+run `docker compose up -d --build --no-deps backend frontend` from the repository root, then refresh the page.
+This replaces only the application containers; it keeps the existing database and uploaded-file volumes.

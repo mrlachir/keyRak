@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // output: "standalone",  <-- Comment this out or delete it!
+  // Docker runs the generated server.js; Vercel keeps its standard output.
+  output: process.env.NEXT_BUILD_OUTPUT === "standalone" ? "standalone" : undefined,
   experimental: {
     serverActions: {
       bodySizeLimit: "160mb", 

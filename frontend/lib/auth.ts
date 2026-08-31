@@ -31,6 +31,7 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, account, profile }) {
       if (account?.provider === "google") {
+        token.oauthLoginAt = Math.floor(Date.now() / 1000);
         token.googleSubject = account.providerAccountId;
         token.emailVerified = (profile as GoogleProfile | undefined)?.email_verified ?? false;
         token.role = "CLIENT";
@@ -60,6 +61,8 @@ export const authOptions: NextAuthOptions = {
         picture: token.picture,
         emailVerified: token.emailVerified,
         role: currentRole,
+        // Preserve the original login time through token refreshes so removal revokes old sessions.
+        authTime: token.oauthLoginAt ?? 0,
       };
       const bootstrapToken = await signBackendToken(identity);
       const resolvedRole = await resolveBackendRole(bootstrapToken.value, currentRole);

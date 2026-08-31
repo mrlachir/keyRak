@@ -22,6 +22,10 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
 
     boolean existsByPropertyId(UUID propertyId);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select b from Booking b where b.user.id = :userId")
+    List<Booking> findByUserIdForUpdate(@Param("userId") UUID userId);
+
     @Query("select coalesce(sum(b.totalPrice), 0) from Booking b where b.paymentCompleted = true")
     BigDecimal sumCompletedPayments();
 

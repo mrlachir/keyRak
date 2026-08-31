@@ -14,6 +14,7 @@ export interface BackendIdentity {
   picture?: string | null;
   emailVerified?: boolean;
   role: UserRole;
+  authTime?: number;
 }
 
 export interface SignedBackendToken {
@@ -36,6 +37,7 @@ export async function signBackendToken(identity: BackendIdentity): Promise<Signe
     picture: identity.picture ?? undefined,
     email_verified: identity.emailVerified ?? false,
     roles: [identity.role],
+    auth_time: identity.authTime ?? 0,
   })
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
     .setSubject(identity.subject)
