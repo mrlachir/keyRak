@@ -11,6 +11,10 @@ interface GoogleProfile extends Profile {
 
 export const authOptions: NextAuthOptions = {
   secret: requireServerEnv("NEXTAUTH_SECRET"),
+  pages: {
+    signIn: "/auth/signin",
+    error: "/auth/signin",
+  },
   providers: [
     GoogleProvider({
       clientId: requireServerEnv("GOOGLE_CLIENT_ID"),
