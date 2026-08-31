@@ -72,10 +72,13 @@ mean identity verification has taken place. A startup migration copies each user
 ID reference into an empty profile ID field, without overwriting existing profile IDs or dropping the old
 booking column. Replacements remove the previous file only after the database transaction commits.
 
-Set `BACKEND_PUBLIC_URL` in the root `.env` to the browser-accessible backend origin for deployment
-(for example, `https://api.example.com`). Compose maps it to `PUBLIC_API_URL`; when running Java directly,
-set `PUBLIC_API_URL` and optionally `PROPERTY_MEDIA_STORAGE_DIR`. Do not use the internal Docker hostname
-for public media URLs. Configure any reverse proxy to accept at least 160 MB request bodies as well.
+Uploaded media is stored in the database as `/uploads/property-media/{filename}`, with no origin.
+Set `NEXT_PUBLIC_BACKEND_API_URL` before building the frontend (`https://keyrak.onrender.com` in production,
+`http://localhost:8080` locally). Compose passes it as a build argument. Keep `BACKEND_API_URL` for server-side
+API requests; never use an internal Docker hostname as the public media origin. `PUBLIC_API_URL` is no longer
+used by the upload service. Java's optional `PROPERTY_MEDIA_STORAGE_DIR` controls the physical file location.
+Vercel's upload payload limit still applies even though the application allows larger multipart bodies.
+See [media delivery and persistent-storage migration](docs/property-media-storage.md) before deploying uploads.
 
 Review endpoints:
 

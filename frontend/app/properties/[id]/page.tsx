@@ -10,13 +10,14 @@ import { PropertyStaticMapShell } from "@/components/property/property-static-ma
 import { FavoriteButton } from "@/components/wishlist/favorite-button";
 import { getOptionalProfile } from "@/lib/management";
 import { getBlockedDates, getProperty, getPropertyReviews } from "@/lib/properties";
+import { resolvePropertyMediaUrl } from "@/lib/property-media-url";
 
 export async function generateMetadata({ params }: PageProps<"/properties/[id]">): Promise<Metadata> {
   const { id } = await params;
   try {
     const property = await getProperty(id);
     if (!property) return { title: "Property not found" };
-    const image = property.media.find((item) => item.type === "IMAGE")?.url;
+    const image = resolvePropertyMediaUrl(property.media.find((item) => item.type === "IMAGE")?.url);
     const description =
       property.description?.slice(0, 155) ??
       `${property.title}, a ${property.bedrooms}-bedroom stay in ${property.city}.`;

@@ -41,7 +41,6 @@ services:
       GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-20b}
       ID_DOCUMENT_STORAGE_DIR: /app/uploads/id-cards
       PROPERTY_MEDIA_STORAGE_DIR: /app/uploads/property-media
-      PUBLIC_API_URL: ${BACKEND_PUBLIC_URL:-http://localhost:8080}
     secrets:
       - source: mysql_password
         target: MYSQL_PASSWORD
@@ -70,6 +69,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_BACKEND_API_URL: ${NEXT_PUBLIC_BACKEND_API_URL:-http://localhost:8080}
     restart: unless-stopped
     environment:
       NEXTAUTH_URL: ${NEXTAUTH_URL:?Set NEXTAUTH_URL in the root .env file}

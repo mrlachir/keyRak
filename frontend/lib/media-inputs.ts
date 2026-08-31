@@ -1,4 +1,5 @@
 import type { CreatePropertyRequest, PropertyMediaType } from "@/types";
+import { isStoredPropertyMediaPath } from "@/lib/property-media-url";
 
 export type MediaFiles = Record<PropertyMediaType, File[]>;
 export type MediaLinks = NonNullable<CreatePropertyRequest["media"]>;
@@ -18,10 +19,11 @@ export function validatePropertyMedia(links: MediaLinks, files: MediaFiles): str
   if (!Array.isArray(links) || links.length > 40) return "Use up to 40 media links.";
   for (const media of links) {
     if (!media || typeof media.url !== "string" || !["IMAGE", "IMAGE_360", "VIDEO"].includes(media.type)) return "Choose a valid media type and link.";
+    if (isStoredPropertyMediaPath(media.url.trim()) && media.url.length <= 2048) continue;
     try {
       const url = new URL(media.url);
       if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || media.url.length > 2048) throw new Error();
-    } catch { return "Media links must be complete HTTP or HTTPS URLs without credentials."; }
+    } catch { return "Media must be a saved property-media path or a complete HTTP/HTTPS URL without credentials."; }
   }
   if (files.IMAGE.length + links.filter(media => media.type === "IMAGE").length === 0) return "Add at least one property photo as a file or direct link.";
   for (const group of mediaGroups) {

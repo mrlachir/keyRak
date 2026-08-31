@@ -43,4 +43,3 @@ app:
   storage:
     id-card-directory: ${ID_DOCUMENT_STORAGE_DIR:./uploads/id-cards}
     property-media-directory: ${PROPERTY_MEDIA_STORAGE_DIR:./uploads/property-media}
-    public-base-url: ${PUBLIC_API_URL:http://localhost:8080}

@@ -22,6 +22,12 @@ npm run dev
 
 Open `http://localhost:3000`. The backend defaults to `http://localhost:8080`.
 
+Set `NEXT_PUBLIC_BACKEND_API_URL` to the public Spring Boot **origin** (no `/api` suffix):
+`http://localhost:8080` locally, or `https://keyrak.onrender.com` on Vercel. This is not a secret.
+It is embedded at build time, so changing it requires rebuilding/redeploying the frontend.
+`BACKEND_API_URL` is still the separate server-side API origin. Uploaded media paths are resolved by
+`lib/property-media-url.ts`; absolute CDN links and bundled frontend assets are preserved.
+
 ## Authentication contract
 
 Auth.js stores the Google login in its own encrypted JWT session using `NEXTAUTH_SECRET`. Separately, the server
@@ -49,9 +55,11 @@ correct panorama, use a 2:1 equirectangular source or an image containing valid 
 
 ```text
 npm run lint
+npm test
 npm run typecheck
 npm run build
 ```
 
-Production builds use Next.js standalone output. The root `docker-compose.yml` supplies all runtime secrets and
-internal service URLs; no `NEXT_PUBLIC_` credential is required.
+Vercel currently uses the standard Next.js output. The legacy Dockerfile expects standalone output and requires
+that separate build mode to be enabled if you deploy with Docker. Compose supplies runtime secrets and the
+public media origin build argument; never expose JWT/Google secrets through `NEXT_PUBLIC_` variables.

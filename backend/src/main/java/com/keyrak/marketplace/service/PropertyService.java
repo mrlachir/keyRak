@@ -385,6 +385,8 @@ public class PropertyService {
     }
 
     private void validateMediaUrl(String value) {
+        // Edit forms submit retained uploads as relative paths, alongside external links.
+        if (FileStorageService.isStoredMediaPath(value.trim())) return;
         try {
             URI uri = URI.create(value.trim());
             if (("https".equalsIgnoreCase(uri.getScheme()) || "http".equalsIgnoreCase(uri.getScheme()))
@@ -392,7 +394,7 @@ public class PropertyService {
         } catch (IllegalArgumentException ignored) {
             // Return one consistent validation response for malformed or unsafe links.
         }
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Media links must be absolute HTTP or HTTPS URLs without credentials");
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Media must be a saved property-media path or an absolute HTTP or HTTPS URL without credentials");
     }
 
     private List<String> normalizeTags(List<String> tags) {

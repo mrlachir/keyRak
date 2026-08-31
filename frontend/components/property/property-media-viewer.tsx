@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { PanoramaViewer } from "@/components/property/panorama-viewer";
 import { PropertyImage } from "@/components/property/property-image";
 import { cn } from "@/lib/utils";
+import { resolvePropertyMediaUrl } from "@/lib/property-media-url";
 import type { PropertyMedia } from "@/types";
 
 type MediaMode = "photos" | "360" | "video";
@@ -45,7 +46,7 @@ export function PropertyMediaViewer({ media, title }: { media: PropertyMedia[]; 
   const [focused, setFocused] = useState(false);
   const reduceMotion = useSyncExternalStore(subscribeToMotionPreference, getMotionPreference, getServerMotionPreference);
   const currentPhoto = photos[photoIndex] ?? photos[0];
-  const poster = photos[0]?.url;
+  const poster = resolvePropertyMediaUrl(photos[0]?.url);
   const activeItems = activeMode === "photos" ? photos : activeMode === "360" ? panoramas : videos;
   const activeIndex = activeMode === "photos" ? photoIndex : activeMode === "360" ? panoramaIndex : videoIndex;
   const itemLabel = activeMode === "photos" ? "photo" : activeMode === "360" ? "360 tour" : "video";
@@ -160,7 +161,7 @@ export function PropertyMediaViewer({ media, title }: { media: PropertyMedia[]; 
           <div id="property-media-video" role="tabpanel" aria-labelledby="property-media-tab-video" className="absolute inset-0 z-0 bg-ink">
             <video
               key={video.id}
-              src={video.url}
+              src={resolvePropertyMediaUrl(video.url)}
               poster={poster}
               controls
               playsInline

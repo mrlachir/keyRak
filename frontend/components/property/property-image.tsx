@@ -5,13 +5,9 @@
 import { useState, type ComponentPropsWithoutRef } from "react";
 
 import { cn } from "@/lib/utils";
+import { resolvePropertyMediaUrl } from "@/lib/property-media-url";
 
-const defaultFallback = "/properties/riad-courtyard.jpg";
-
-function usableSource(value: string | null | undefined, fallback: string): string {
-  const source = value?.trim();
-  return source ? source : fallback;
-}
+const defaultFallback = "/properties/image-unavailable.svg";
 
 type PropertyImageProps = Omit<ComponentPropsWithoutRef<"img">, "src" | "alt" | "onError"> & {
   src?: string | null;
@@ -22,7 +18,7 @@ type PropertyImageProps = Omit<ComponentPropsWithoutRef<"img">, "src" | "alt" | 
 
 /**
  * Keeps property cards and galleries usable when an admin-provided media URL is
- * unavailable. The fallback is a bundled property image, so it does not depend
+ * unavailable. The fallback is a neutral bundled placeholder, so it does not depend
  * on an external host or the image optimizer succeeding for the failed source.
  */
 export function PropertyImage({
@@ -31,13 +27,14 @@ export function PropertyImage({
   fallbackSrc = defaultFallback,
   ...imageProps
 }: PropertyImageProps) {
-  const initialSrc = usableSource(src, fallbackSrc);
+  const resolvedFallback = resolvePropertyMediaUrl(fallbackSrc) ?? defaultFallback;
+  const initialSrc = resolvePropertyMediaUrl(src) ?? resolvedFallback;
 
   return (
     <FallbackablePropertyImage
-      key={`${initialSrc}:${fallbackSrc}`}
+      key={`${initialSrc}:${resolvedFallback}`}
       initialSrc={initialSrc}
-      fallbackSrc={fallbackSrc}
+      fallbackSrc={resolvedFallback}
       alt={alt}
       imageProps={imageProps}
     />

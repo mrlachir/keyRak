@@ -2,6 +2,7 @@ package com.keyrak.marketplace.web;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.keyrak.marketplace.domain.entity.Booking;
 import com.keyrak.marketplace.domain.entity.Property;
 import com.keyrak.marketplace.domain.entity.Review;
@@ -30,6 +31,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
@@ -82,9 +84,24 @@ class PropertyMediaAndReviewIntegrationTest {
                 .andReturn().getResponse().getContentAsString();
         JsonNode media = objectMapper.readTree(response).get("media");
         try {
+            UUID propertyId = UUID.fromString(objectMapper.readTree(response).get("id").asText());
+            assertThat(propertyRepository.findById(propertyId).orElseThrow().getMedia())
+                    .allSatisfy(item -> assertThat(item.getUrl()).startsWith("/uploads/property-media/").doesNotContain("://"));
             mockMvc.perform(get(URI.create(media.get(0).get("url").asText()).getPath()))
                     .andExpect(status().isOk())
                     .andExpect(content().bytes(imageBytes));
+            // Editing the property must retain existing uploaded media without re-uploading.
+            ObjectNode update = (ObjectNode) objectMapper.readTree(details.getBytes());
+            var keptMedia = update.putArray("media");
+            media.forEach(item -> keptMedia.addObject().put("url", item.get("url").asText())
+                    .put("type", item.get("type").asText()).put("displayOrder", item.get("displayOrder").asInt()));
+            mockMvc.perform(multipart("/api/properties/{id}", propertyId)
+                            .file(new MockMultipartFile("property", "property.json", "application/json", objectMapper.writeValueAsBytes(update)))
+                            .with(request -> { request.setMethod("PUT"); return request; })
+                            .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")).jwt(token -> token
+                                    .subject("upload-admin").claim("email", "upload-admin@example.test"))))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.media.length()").value(4))
+                    .andExpect(jsonPath("$.media[0].url").value(media.get(0).get("url").asText()));
             mockMvc.perform(get("/uploads/id-cards/private.pdf"))
                     .andExpect(status().isUnauthorized());
         } finally {
@@ -166,7 +183,7 @@ class PropertyMediaAndReviewIntegrationTest {
             assertThat(media.findValuesAsText("type")).containsExactly("IMAGE", "IMAGE_360", "VIDEO", "IMAGE_360", "IMAGE_360", "VIDEO", "VIDEO");
         } finally {
             media.forEach(item -> {
-                if (item.get("url").asText().startsWith("http://localhost:8080/uploads/property-media/")) fileStorageService.deleteQuietly(item.get("url").asText());
+                if (item.get("url").asText().startsWith("/uploads/property-media/")) fileStorageService.deleteQuietly(item.get("url").asText());
             });
         }
     }
@@ -257,6 +274,23 @@ class PropertyMediaAndReviewIntegrationTest {
         mockMvc.perform(delete("/api/reviews/{id}", secondReview.getId())
                         .with(jwt().jwt(token -> token.subject(admin.getGoogleSubject()).claim("email", admin.getEmail()))))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void relativeMediaReferencesCannotTargetPrivateFilesOrTraverseDirectories() throws Exception {
+        for (String path : List.of("/uploads/id-cards/private.png", "/uploads/property-media/../private.png",
+                "/uploads/property-media/%2e%2e%2fprivate.png", "//example.test/photo.png")) {
+            ObjectNode details = objectMapper.createObjectNode();
+            details.put("title", "Invalid relative reference").put("description", "Test").put("propertyType", "VILLA")
+                    .put("address", "Medina").put("city", "Marrakesh").put("pricePerNight", 1000)
+                    .put("latitude", 31).put("longitude", -7).put("maxGuests", 4).put("bedrooms", 2).put("bathrooms", 2).put("active", true);
+            details.putArray("media").addObject().put("type", "IMAGE").put("url", path).put("displayOrder", 0);
+            mockMvc.perform(multipart("/api/properties")
+                            .file(new MockMultipartFile("property", "property.json", "application/json", objectMapper.writeValueAsBytes(details)))
+                            .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")).jwt(token -> token
+                                    .subject("invalid-media-admin").claim("email", "invalid-media-admin@example.test"))))
+                    .andExpect(status().isBadRequest());
+        }
     }
 
     private Property property(String title) {

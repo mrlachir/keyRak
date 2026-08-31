@@ -28,24 +28,49 @@ class FileStorageServiceTest {
 
     @BeforeEach
     void setUp() {
-        storage = new FileStorageService(directory.toString(), "http://localhost:8080/");
+        storage = new FileStorageService(directory.toString());
         storage.initialize();
     }
 
     @Test
-    void storesRandomizedFileNameAndCanCleanUpAbsoluteUrl() throws Exception {
+    void storesOnlyRelativePathWithRandomizedFileNameAndCanCleanUp() throws Exception {
         byte[] content = {1, 2, 3, 4};
         String url = storage.store(
                 new MockMultipartFile("images", "../../unsafe.png", "image/png", content),
                 PropertyMediaType.IMAGE
         );
-        assertThat(url).startsWith("http://localhost:8080/uploads/property-media/").endsWith(".png");
+        assertThat(url).startsWith("/uploads/property-media/").endsWith(".png").doesNotContain("://", "localhost");
         Path storedFile = directory.resolve(url.substring(url.lastIndexOf('/') + 1));
         assertThat(Files.readAllBytes(storedFile)).isEqualTo(content);
         assertThat(storedFile.getFileName().toString()).doesNotContain("unsafe");
 
         storage.deleteQuietly(url);
         assertThat(Files.exists(storedFile)).isFalse();
+    }
+
+    @Test
+    void videosAndPanoramasAlsoUseRelativePaths() {
+        String video = storage.store(new MockMultipartFile("video", "tour.mp4", "video/mp4", new byte[]{1}), PropertyMediaType.VIDEO);
+        String panorama = storage.store(new MockMultipartFile("panorama", "tour.jpg", "image/jpeg", new byte[]{1}), PropertyMediaType.IMAGE_360);
+        assertThat(video).startsWith(FileStorageService.PUBLIC_MEDIA_PATH).endsWith(".mp4");
+        assertThat(panorama).startsWith(FileStorageService.PUBLIC_MEDIA_PATH).endsWith(".jpg");
+        storage.deleteQuietly(video);
+        storage.deleteQuietly(panorama);
+    }
+
+    @Test
+    void cleanupRejectsExternalUrlsTraversalAndOtherUploadDirectories() throws Exception {
+        String stored = storage.store(new MockMultipartFile("images", "cover.png", "image/png", new byte[]{1}), PropertyMediaType.IMAGE);
+        Path file = directory.resolve(stored.substring(stored.lastIndexOf('/') + 1));
+        for (String invalid : new String[]{"https://example.test" + stored, "/uploads/property-media/../cover.png",
+                "/uploads/property-media/%2e%2e%2fcover.png", "/uploads/id-cards/private.png",
+                "/uploads/property-media/subdirectory/cover.png", "/uploads/property-media/", "//example.test/file.png"}) {
+            assertThat(FileStorageService.isStoredMediaPath(invalid)).isFalse();
+            storage.deleteQuietly(invalid);
+        }
+        assertThat(Files.exists(file)).isTrue();
+        storage.deleteQuietly(stored);
+        assertThat(Files.exists(file)).isFalse();
     }
 
     @Test

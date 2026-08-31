@@ -21,6 +21,7 @@ import java.util.UUID;
 @Service
 public class FileStorageService {
 
+    public static final String PUBLIC_MEDIA_PATH = "/uploads/property-media/";
     private static final Logger log = LoggerFactory.getLogger(FileStorageService.class);
     private static final long MAX_IMAGE_SIZE_BYTES = 12L * 1024L * 1024L;
     private static final long MAX_VIDEO_SIZE_BYTES = 100L * 1024L * 1024L;
@@ -39,14 +40,11 @@ public class FileStorageService {
     );
 
     private final Path storageDirectory;
-    private final String publicBaseUrl;
 
     public FileStorageService(
-            @Value("${app.storage.property-media-directory:./uploads/property-media}") String storageDirectory,
-            @Value("${app.storage.public-base-url:http://localhost:8080}") String publicBaseUrl
+            @Value("${app.storage.property-media-directory:./uploads/property-media}") String storageDirectory
     ) {
         this.storageDirectory = Path.of(storageDirectory).toAbsolutePath().normalize();
-        this.publicBaseUrl = publicBaseUrl.replaceAll("/+$", "");
     }
 
     @PostConstruct
@@ -106,21 +104,30 @@ public class FileStorageService {
             log.error("Could not store property media file {}", file.getOriginalFilename(), exception);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Property media could not be stored");
         }
-        return publicBaseUrl + "/uploads/property-media/" + storedFileName;
+        // Persist a portable reference, never a deployment-specific host/origin.
+        return PUBLIC_MEDIA_PATH + storedFileName;
     }
 
-    public void deleteQuietly(String storedUrl) {
-        if (storedUrl == null || storedUrl.isBlank()) {
+    public static boolean isStoredMediaPath(String value) {
+        if (value == null || !value.startsWith(PUBLIC_MEDIA_PATH)) return false;
+        String fileName = value.substring(PUBLIC_MEDIA_PATH.length());
+        return fileName.matches("[A-Za-z0-9][A-Za-z0-9._-]*") && !fileName.contains("..");
+    }
+
+    public void deleteQuietly(String storedPath) {
+        // Only references created by this storage service are eligible for cleanup.
+        // Never infer a local file to delete from an arbitrary external URL.
+        if (!isStoredMediaPath(storedPath)) {
             return;
         }
         try {
-            String fileName = storedUrl.substring(storedUrl.lastIndexOf('/') + 1);
+            String fileName = storedPath.substring(PUBLIC_MEDIA_PATH.length());
             Path target = storageDirectory.resolve(fileName).normalize();
             if (!fileName.isBlank() && target.getParent().equals(storageDirectory)) {
                 Files.deleteIfExists(target);
             }
         } catch (IOException | RuntimeException exception) {
-            log.warn("Could not remove unused property media {}", storedUrl, exception);
+            log.warn("Could not remove unused property media {}", storedPath, exception);
         }
     }
 

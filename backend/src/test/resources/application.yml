@@ -28,4 +28,3 @@ app:
   storage:
     id-card-directory: ${java.io.tmpdir}/keyrak-test-id-cards
     property-media-directory: ${java.io.tmpdir}/keyrak-test-property-media
-    public-base-url: http://localhost:8080

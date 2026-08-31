@@ -16,6 +16,8 @@ ENV GOOGLE_CLIENT_ID=build-only-google-client-id
 ENV GOOGLE_CLIENT_SECRET=build-only-google-client-secret
 ENV JWT_SECRET=build-only-jwt-secret-at-least-32-bytes
 ENV BACKEND_API_URL=http://backend:8080
+ARG NEXT_PUBLIC_BACKEND_API_URL=http://localhost:8080
+ENV NEXT_PUBLIC_BACKEND_API_URL=${NEXT_PUBLIC_BACKEND_API_URL}
 RUN npm run build
 
 FROM node:22-alpine AS runtime

@@ -2,6 +2,7 @@
 
 import { LoaderCircle, TriangleAlert } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { resolvePropertyMediaUrl } from "@/lib/property-media-url";
 
 export function PanoramaViewer({ src, title }: { src: string; title: string }) {
   const container = useRef<HTMLDivElement>(null);
@@ -14,9 +15,11 @@ export function PanoramaViewer({ src, title }: { src: string; title: string }) {
     import("@photo-sphere-viewer/core")
       .then(({ Viewer }) => {
         if (disposed || !container.current) return;
+        const panoramaUrl = resolvePropertyMediaUrl(src);
+        if (!panoramaUrl) throw new Error("The panorama URL or public backend origin is invalid.");
         viewer = new Viewer({
           container: container.current,
-          panorama: src,
+          panorama: panoramaUrl,
           caption: `${title} · 360° tour`,
           navbar: ["zoom", "fullscreen"],
           touchmoveTwoFingers: true,

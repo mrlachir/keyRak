@@ -1,7 +1,7 @@
 import type { Property, PropertyCardData } from "@/types";
 
 export function toPropertyCardData(property: Property): PropertyCardData {
-  const image = property.media.find((item) => item.type === "IMAGE") ?? property.media[0];
+  const image = property.media.find((item) => item.type === "IMAGE");
 
   return {
     id: property.id,
@@ -9,7 +9,7 @@ export function toPropertyCardData(property: Property): PropertyCardData {
     location: `${property.address}, ${property.city}`,
     pricePerNight: Number(property.pricePerNight),
     rating: 4.9,
-    imageUrl: image?.url ?? "/properties/riad-courtyard.jpg",
+    imageUrl: image?.url ?? "/properties/image-unavailable.svg",
     imageAlt: `${property.title} in ${property.city}`,
     guests: property.maxGuests,
     bedrooms: property.bedrooms,
