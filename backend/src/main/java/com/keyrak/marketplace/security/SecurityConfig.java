@@ -32,7 +32,13 @@ import java.util.List;
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    // CSRF review: protected requests require an explicit Bearer JWT, not cookies or HTTP Basic.
+    // Revisit this suppression if cookie/session authentication is added to this stateless API.
+
+    // Analyse CSRF : les requêtes protégées requièrent un Bearer JWT explicite, et non des cookies ou HTTP Basic.
+    // À réévaluer si une authentification par cookie/session est ajoutée à cette API stateless.
     @Bean
+    @SuppressWarnings("java:S4502")
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             JwtAuthenticationConverter jwtAuthenticationConverter,

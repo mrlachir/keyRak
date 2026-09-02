@@ -44,6 +44,9 @@ The default expected issuer is `keyrak-nextauth` and the default audience is `ke
 On Windows, use `mvnw.cmd` instead. A running MySQL instance and the required environment variables are needed to
 start the application normally; tests use an isolated H2 database in MySQL compatibility mode.
 
+For the new database-free unit suite, JaCoCo coverage reports, and manual SonarCloud upload instructions,
+see [Testing and coverage](TESTING.md). `./mvnw clean verify` generates the HTML and XML reports automatically.
+
 ## API surface
 
 - `POST /api/ai/search` — public semantic intent parsing.

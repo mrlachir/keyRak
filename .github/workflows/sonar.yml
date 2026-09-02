@@ -18,11 +18,14 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
           
-      - name: Compile Backend
-        run: mvn -f backend/pom.xml clean compile
+      - name: Test Backend and Generate Coverage
+        run: mvn -B -f backend/pom.xml clean verify
         
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
+        with:
+          args: >
+            -Dsonar.projectKey=mrlachir_keyrak_api
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

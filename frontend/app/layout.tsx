@@ -19,6 +19,11 @@ export const metadata: Metadata = {
   },
   description:
     "Discover villas, riads, and apartments in Marrakesh through natural-language search and immersive property stories.",
+  icons: {
+    icon: { url: "/keyrak-tab-icon.ico?v=20260902-2", type: "image/x-icon" },
+    shortcut: "/keyrak-tab-icon.ico?v=20260902-2",
+    apple: "/keyrak-favicon.png?v=20260902-2",
+  },
   openGraph: {
     type: "website",
     siteName: "KEYRAK",
